@@ -11,7 +11,7 @@ Each node follows the pattern:
 
 from graph.state import EssayState
 from config.models import get_llm
-from config.prompts import PLANNER_PROMPT, WRITER_PROMPT, CRITIC_PROMPT
+from config.prompts import PLANNER_PROMPT, WRITER_PROMPT, CRITIC_PROMPT, SUMMARISER_PROMPT
 from graph.tools import format_research_results, summarize_research, execute_research
 from utils.parsers import parse_planner_response, parse_critic_response, estimate_word_count
 from langchain_core.messages import HumanMessage, AIMessage
@@ -93,10 +93,12 @@ If you have sufficient research to proceed with writing, set READY_TO_WRITE to Y
 
 def researcher_node(state: EssayState) -> dict:
     """
-    Researcher agent executes Tavily searches for planner's queries.
+    Researcher agent executes Tavily searches and summarizes findings.
 
-    This node performs pure tool execution - no LLM call.
-    Executes all queries in research_queries and aggregates results.
+    This node:
+    1. Executes Tavily searches for all queries
+    2. Uses an LLM to intelligently summarize each query's results in context
+    3. Stores both raw results and intelligent summaries
 
     Args:
         state: Current essay state
@@ -106,6 +108,47 @@ def researcher_node(state: EssayState) -> dict:
     """
     # Execute all research queries
     results = execute_research(state["research_queries"])
+
+    # Get LLM for summarization
+    llm = get_llm(state["model_provider"], state["model_name"])
+
+    # Summarize each query's results using LLM
+    for result in results:
+        if "error" not in result:
+            # Prepare research content for summarization
+            research_content = ""
+            for i, item in enumerate(result.get('results', []), 1):
+                title = item.get('title', 'N/A')
+                content = item.get('raw_content', item.get('content', 'N/A'))
+                url = item.get('url', 'N/A')
+
+                # Include up to 3000 chars per source for the summarizer
+                if len(content) > 3000:
+                    content = content[:3000] + "..."
+
+                research_content += f"\n[Source {i}] {title}\nURL: {url}\n{content}\n"
+
+            # Build context message
+            context_message = f"""Essay Topic: {state['topic']}
+
+Current Thesis: {state.get('thesis', 'Not yet developed')}
+
+Research Query: {result['query']}
+
+Raw Research Findings:
+{research_content}"""
+
+            # Create messages using the SUMMARISER_PROMPT
+            messages = [
+                HumanMessage(content=SUMMARISER_PROMPT),
+                HumanMessage(content=context_message)
+            ]
+
+            # Get summary from LLM
+            summary_response = llm.invoke(messages)
+
+            # Store summary in the result
+            result['summary'] = summary_response.content
 
     # Append to existing research results
     all_results = state.get("research_results", []) + results

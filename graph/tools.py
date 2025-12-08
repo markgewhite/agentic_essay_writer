@@ -88,23 +88,25 @@ def format_research_results(results: List[Dict]) -> str:
             formatted += f"  Error: {result['error']}\n\n"
             continue
 
-        formatted += "Findings:\n"
-        for item in result.get('results', []):
-            # Extract title, content, raw_content, and URL
-            title = item.get('title', 'N/A')
-            # Prefer raw_content (full text) over content (summary)
-            content = item.get('raw_content', item.get('content', 'N/A'))
-            url = item.get('url', 'N/A')
+        # Use LLM-generated summary if available, otherwise fall back to raw content
+        if "summary" in result:
+            formatted += "Summary:\n"
+            formatted += f"{result['summary']}\n\n"
+        else:
+            # Fallback to raw content (legacy support)
+            formatted += "Findings:\n"
+            for item in result.get('results', []):
+                title = item.get('title', 'N/A')
+                content = item.get('raw_content', item.get('content', 'N/A'))
+                url = item.get('url', 'N/A')
 
-            # Use much larger limit for in-depth research (2000 chars ~ 300-400 words)
-            if len(content) > 2000:
-                content = content[:2000] + "..."
+                if len(content) > 2000:
+                    content = content[:2000] + "..."
 
-            formatted += f"  - {title}\n"
-            formatted += f"    {content}\n"
-            formatted += f"    Source: {url}\n"
-
-        formatted += "\n"
+                formatted += f"  - {title}\n"
+                formatted += f"    {content}\n"
+                formatted += f"    Source: {url}\n"
+            formatted += "\n"
 
     return formatted
 
@@ -138,18 +140,19 @@ def summarize_research(results: List[Dict]) -> str:
         if "error" not in result:
             summary += f"On '{result['query']}':\n"
 
-            # Get top 3 results per query for better coverage
-            for item in result.get('results', [])[:3]:
-                # Prefer raw_content for in-depth information
-                content = item.get('raw_content', item.get('content', 'N/A'))
+            # Use LLM-generated summary if available
+            if "summary" in result:
+                summary += f"{result['summary']}\n\n"
+            else:
+                # Fallback to raw content (legacy support)
+                for item in result.get('results', [])[:3]:
+                    content = item.get('raw_content', item.get('content', 'N/A'))
 
-                # Use larger limit for writer (1500 chars ~ 200-250 words)
-                if len(content) > 1500:
-                    content = content[:1500] + "..."
+                    if len(content) > 1500:
+                        content = content[:1500] + "..."
 
-                summary += f"- {content}\n"
-
-            summary += "\n"
+                    summary += f"- {content}\n"
+                summary += "\n"
 
     return summary
 
