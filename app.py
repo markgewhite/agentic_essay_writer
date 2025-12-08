@@ -96,7 +96,7 @@ with st.sidebar:
 topic = st.text_area(
     "Essay Topic",
     placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
-    height=100,
+    height=150,
     help="Provide a clear, specific topic for the essay"
 )
 
@@ -159,6 +159,9 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     # ========================================================================
 
     try:
+        # Track the final draft as we stream
+        final_draft = None
+
         # Use workflow.stream() to get intermediate node outputs
         for event in workflow.stream(initial_state):
             # event is a dict with node name as key
@@ -201,6 +204,10 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 if node_name == "writer":
                     writing_status.info("✍️ Writer generating/revising draft...")
 
+            # Track the draft whenever writer node emits it
+            if node_name == "writer" and "draft" in node_output:
+                final_draft = node_output["draft"]
+
         # ====================================================================
         # DISPLAY FINAL ESSAY
         # ====================================================================
@@ -225,13 +232,13 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             # Display the essay
             # Note: We need to track the final draft from the last writer node output
             # This is a simplified version - in production you'd track state properly
-            if "draft" in node_output:
-                st.markdown(node_output["draft"])
+            if final_draft:
+                st.markdown(final_draft)
 
                 # Download button
                 st.download_button(
                     label="📥 Download Essay",
-                    data=node_output["draft"],
+                    data=final_draft,
                     file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
                     mime="text/plain"
                 )
