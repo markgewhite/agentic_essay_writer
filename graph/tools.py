@@ -39,7 +39,7 @@ def create_tavily_tool():
         )
 
     return TavilySearchResults(
-        max_results=5,              # Top 5 results per query for more coverage
+        max_results=8,              # Top 8 results per query for comprehensive coverage
         search_depth="advanced",    # Deep search for quality
         include_answer=True,        # Get AI-generated answer
         include_raw_content=True,   # Get full content for in-depth research

@@ -85,6 +85,7 @@ Your responsibilities:
 3. Filter out noise, ads, irrelevant content, and redundant information
 4. Organize findings thematically when multiple perspectives are present
 5. Preserve important details like specific examples, case studies, and data points
+6. Cite ALL sources properly using APA format to maintain traceability
 
 Guidelines for summarization:
 - Focus on information directly relevant to the essay topic and thesis
@@ -94,12 +95,22 @@ Guidelines for summarization:
 - Note any particularly credible or authoritative sources
 - Maintain objectivity - report what sources say without adding your own opinions
 
+Citation requirements (CRITICAL):
+- Use APA in-text citation format for every fact, statistic, or claim
+- Reference sources by their title and URL in parentheses: (Source Title, URL)
+- Every sentence with factual content MUST include a citation
+- When multiple sources support the same point, cite all: (Source 1, URL1; Source 2, URL2)
+- Do not make claims without attribution to a specific source
+- If information appears in multiple sources, cite the most authoritative one
+
 Output format:
-- Provide a well-organized summary of 300-500 words
+- Provide a comprehensive, well-organized summary of 500-800 words
 - Use clear paragraphs organized by theme or perspective
-- Include specific facts, statistics, and examples with attribution (e.g., "According to [source]...")
-- Highlight any conflicting viewpoints or debates
-- Focus on depth over breadth - better to cover key points thoroughly than mention everything superficially
+- Include in-text citations after every factual statement
+- Example: "AI adoption in K-12 education increased to 60% in 2024-2025 (Gallup Education Survey, https://...)"
+- Highlight any conflicting viewpoints or debates with citations showing different perspectives
+- Prioritize depth and detail - include specific examples, case studies, statistics, and nuanced arguments
+- Cover multiple perspectives and dimensions of the topic comprehensively
 """,
 
     "user": """Essay Topic: {topic}

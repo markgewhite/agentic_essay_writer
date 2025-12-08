@@ -118,9 +118,9 @@ def researcher_node(state: EssayState) -> dict:
                 content = item.get('raw_content', item.get('content', 'N/A'))
                 url = item.get('url', 'N/A')
 
-                # Include up to 3000 chars per source for the summarizer
-                if len(content) > 3000:
-                    content = content[:3000] + "..."
+                # Include up to 5000 chars per source for the summarizer (more depth)
+                if len(content) > 5000:
+                    content = content[:5000] + "..."
 
                 research_content += f"\n[Source {i}] {title}\nURL: {url}\n{content}\n"
 
