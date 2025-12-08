@@ -39,10 +39,10 @@ def create_tavily_tool():
         )
 
     return TavilySearchResults(
-        max_results=3,              # Top 3 results per query
+        max_results=5,              # Top 5 results per query for more coverage
         search_depth="advanced",    # Deep search for quality
         include_answer=True,        # Get AI-generated answer
-        include_raw_content=False,  # Don't need full HTML
+        include_raw_content=True,   # Get full content for in-depth research
         include_images=False        # Not needed for text essays
     )
 
@@ -90,14 +90,15 @@ def format_research_results(results: List[Dict]) -> str:
 
         formatted += "Findings:\n"
         for item in result.get('results', []):
-            # Extract title, content, and URL
+            # Extract title, content, raw_content, and URL
             title = item.get('title', 'N/A')
-            content = item.get('content', 'N/A')
+            # Prefer raw_content (full text) over content (summary)
+            content = item.get('raw_content', item.get('content', 'N/A'))
             url = item.get('url', 'N/A')
 
-            # Truncate content to ~200 chars for readability
-            if len(content) > 200:
-                content = content[:200] + "..."
+            # Use much larger limit for in-depth research (2000 chars ~ 300-400 words)
+            if len(content) > 2000:
+                content = content[:2000] + "..."
 
             formatted += f"  - {title}\n"
             formatted += f"    {content}\n"
@@ -137,13 +138,14 @@ def summarize_research(results: List[Dict]) -> str:
         if "error" not in result:
             summary += f"On '{result['query']}':\n"
 
-            # Get top 2 results per query for conciseness
-            for item in result.get('results', [])[:2]:
-                content = item.get('content', 'N/A')
+            # Get top 3 results per query for better coverage
+            for item in result.get('results', [])[:3]:
+                # Prefer raw_content for in-depth information
+                content = item.get('raw_content', item.get('content', 'N/A'))
 
-                # Truncate to ~150 chars
-                if len(content) > 150:
-                    content = content[:150] + "..."
+                # Use larger limit for writer (1500 chars ~ 200-250 words)
+                if len(content) > 1500:
+                    content = content[:1500] + "..."
 
                 summary += f"- {content}\n"
 
