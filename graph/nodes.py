@@ -11,7 +11,7 @@ Each node follows the pattern:
 
 from graph.state import EssayState
 from config.models import get_llm
-from config.prompts import PLANNER_PROMPT, WRITER_PROMPT, CRITIC_PROMPT, SUMMARISER_PROMPT
+from config.prompts import PLANNER_PROMPTS, WRITER_PROMPTS, CRITIC_PROMPTS, RESEARCHER_PROMPTS
 from graph.tools import format_research_results, summarize_research, execute_research
 from utils.parsers import parse_planner_response, parse_critic_response, estimate_word_count
 from langchain_core.messages import HumanMessage, AIMessage
@@ -45,22 +45,18 @@ def planner_node(state: EssayState) -> dict:
     else:
         task = "Review the research results and decide if you have sufficient information to create a complete outline, or if you need additional research."
 
-    # Construct user message
-    user_message = f"""Topic: {state['topic']}
-
-Current Iteration: {state['planning_iteration'] + 1}/{state['max_planning_iterations']}
-
-{research_context}
-
-Task: {task}
-
-Please provide your thesis, outline, and any additional research queries needed.
-If you have sufficient research to proceed with writing, set READY_TO_WRITE to Yes.
-"""
+    # Construct user message using template
+    user_message = PLANNER_PROMPTS["user"].format(
+        topic=state['topic'],
+        iteration=state['planning_iteration'] + 1,
+        max_iterations=state['max_planning_iterations'],
+        research_context=research_context,
+        task=task
+    )
 
     # Create messages for LLM
     messages = [
-        HumanMessage(content=PLANNER_PROMPT),
+        HumanMessage(content=PLANNER_PROMPTS["system"]),
         HumanMessage(content=user_message)
     ]
 
@@ -128,19 +124,17 @@ def researcher_node(state: EssayState) -> dict:
 
                 research_content += f"\n[Source {i}] {title}\nURL: {url}\n{content}\n"
 
-            # Build context message
-            context_message = f"""Essay Topic: {state['topic']}
+            # Build context message using template
+            context_message = RESEARCHER_PROMPTS["user"].format(
+                topic=state['topic'],
+                thesis=state.get('thesis', 'Not yet developed'),
+                query=result['query'],
+                research_content=research_content
+            )
 
-Current Thesis: {state.get('thesis', 'Not yet developed')}
-
-Research Query: {result['query']}
-
-Raw Research Findings:
-{research_content}"""
-
-            # Create messages using the SUMMARISER_PROMPT
+            # Create messages using the RESEARCHER_PROMPTS
             messages = [
-                HumanMessage(content=SUMMARISER_PROMPT),
+                HumanMessage(content=RESEARCHER_PROMPTS["system"]),
                 HumanMessage(content=context_message)
             ]
 
@@ -180,38 +174,27 @@ def writer_node(state: EssayState) -> dict:
         # Initial draft generation
         research_summary = summarize_research(state["research_results"])
 
-        user_message = f"""Topic: {state['topic']}
-
-Thesis: {state['thesis']}
-
-Outline:
-{state['outline']}
-
-Research Summary:
-{research_summary}
-
-Target Length: {state['max_essay_length']} words
-
-Task: Write the initial essay draft following the outline exactly. Integrate the research findings to support your arguments. Aim for approximately {state['max_essay_length']} words.
-"""
+        user_message = WRITER_PROMPTS["initial_draft"].format(
+            topic=state['topic'],
+            thesis=state['thesis'],
+            outline=state['outline'],
+            research_summary=research_summary,
+            max_essay_length=state['max_essay_length']
+        )
 
     else:
         # Revision based on feedback
-        user_message = f"""Current Draft:
-{state['draft']}
-
-Critic Feedback:
-{state['feedback']}
-
-Target Length: {state['max_essay_length']} words
-Current Iteration: {state['writing_iteration']}/{state['max_writing_iterations']}
-
-Task: Revise the draft addressing ALL feedback points. Preserve the strengths identified and improve the areas that need work. Maintain overall coherence.
-"""
+        user_message = WRITER_PROMPTS["revision"].format(
+            draft=state['draft'],
+            feedback=state['feedback'],
+            max_essay_length=state['max_essay_length'],
+            iteration=state['writing_iteration'],
+            max_iterations=state['max_writing_iterations']
+        )
 
     # Create messages for LLM
     messages = [
-        HumanMessage(content=WRITER_PROMPT),
+        HumanMessage(content=WRITER_PROMPTS["system"]),
         HumanMessage(content=user_message)
     ]
 
@@ -248,26 +231,20 @@ def critic_node(state: EssayState) -> dict:
     # Estimate current word count
     word_count = estimate_word_count(state["draft"])
 
-    # Construct user message
-    user_message = f"""Essay Draft:
-{state['draft']}
-
-Original Outline:
-{state['outline']}
-
-Thesis:
-{state['thesis']}
-
-Target Length: {state['max_essay_length']} words
-Current Word Count: ~{word_count} words
-Current Iteration: {state['writing_iteration']}/{state['max_writing_iterations']}
-
-Task: Evaluate the draft thoroughly against all criteria. Provide specific, actionable feedback. If the essay meets high standards, approve it. If not, identify specific improvements needed.
-"""
+    # Construct user message using template
+    user_message = CRITIC_PROMPTS["user"].format(
+        draft=state['draft'],
+        outline=state['outline'],
+        thesis=state['thesis'],
+        max_essay_length=state['max_essay_length'],
+        word_count=word_count,
+        iteration=state['writing_iteration'],
+        max_iterations=state['max_writing_iterations']
+    )
 
     # Create messages for LLM
     messages = [
-        HumanMessage(content=CRITIC_PROMPT),
+        HumanMessage(content=CRITIC_PROMPTS["system"]),
         HumanMessage(content=user_message)
     ]
 
