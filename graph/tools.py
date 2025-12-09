@@ -100,8 +100,8 @@ def format_research_results(results: List[Dict]) -> str:
                 content = item.get('raw_content', item.get('content', 'N/A'))
                 url = item.get('url', 'N/A')
 
-                if len(content) > 2000:
-                    content = content[:2000] + "..."
+                #if len(content) > 2000:
+                #    content = content[:2000] + "..."
 
                 formatted += f"  - {title}\n"
                 formatted += f"    {content}\n"
@@ -148,8 +148,8 @@ def summarize_research(results: List[Dict]) -> str:
                 for item in result.get('results', [])[:3]:
                     content = item.get('raw_content', item.get('content', 'N/A'))
 
-                    if len(content) > 1500:
-                        content = content[:1500] + "..."
+                    #if len(content) > 1500:
+                    #    content = content[:1500] + "..."
 
                     summary += f"- {content}\n"
                 summary += "\n"
