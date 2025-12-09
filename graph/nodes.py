@@ -39,19 +39,18 @@ def planner_node(state: EssayState) -> dict:
     # Build context from previous research
     research_context = format_research_results(state["research_results"])
 
-    # Determine task based on iteration
+    # Select appropriate prompt based on iteration
     if state["planning_iteration"] == 0:
-        task = "Analyze the topic and identify what research is needed to develop a strong thesis and outline."
+        prompt_key = "initial"
     else:
-        task = "Review the research results and decide if you have sufficient information to create a complete outline, or if you need additional research."
+        prompt_key = "subsequent"
 
-    # Construct user message using template
-    user_message = PLANNER_PROMPTS["user"].format(
+    # Construct user message using appropriate template
+    user_message = PLANNER_PROMPTS[prompt_key].format(
         topic=state['topic'],
         iteration=state['planning_iteration'] + 1,
         max_iterations=state['max_planning_iterations'],
-        research_context=research_context,
-        task=task
+        research_context=research_context
     )
 
     # Create messages for LLM

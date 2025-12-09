@@ -70,16 +70,29 @@ READY_TO_WRITE: [Yes/No]
 REASONING: [Explain why you're ready to write or what additional research is needed]
 """,
 
-    "user": """Topic: {topic}
+    "initial": """Topic: {topic}
 
 CURRENT ITERATION: {iteration}/{max_iterations}
 
 RESEARCH CONTEXT:
 {research_context}
 
-TASK: {task}
+TASK: Analyze the topic and identify what research is needed to develop a strong thesis and outline.
 
-Please revise your thesis, outline based the evidence gathered.
+Please develop an initial thesis and outline.
+Formulate specific research queries to gather evidence for your arguments.
+""",
+
+    "subsequent": """Topic: {topic}
+
+CURRENT ITERATION: {iteration}/{max_iterations}
+
+RESEARCH CONTEXT:
+{research_context}
+
+TASK: Review the research results and decide if you have sufficient information to create a complete outline, or if you need additional research.
+
+Please revise your thesis and outline based on the evidence gathered.
 Formulate additional research queries, as needed.
 If you have sufficient research to proceed with writing, set READY_TO_WRITE to Yes.
 """
