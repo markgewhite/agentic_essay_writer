@@ -25,12 +25,12 @@ st.set_page_config(
 st.title("📝 Multi-Agent Essay Writer")
 st.markdown("""
 This AI-powered essay writer uses multiple specialized agents:
-- **Planner**: Develops thesis and outline
+- **Editor**: Develops thesis and outline, commissions research, reviews critiques and directs revisions
 - **Researcher**: Gathers web-based research using Tavily
-- **Writer**: Generates and revises essay drafts
-- **Critic**: Evaluates quality and provides feedback
+- **Writer**: Generates and revises essay drafts based on editor direction
+- **Critic**: Evaluates quality and provides detailed feedback
 
-The system iteratively refines the essay through two feedback loops until high quality is achieved.
+The editor orchestrates the entire process, iteratively refining the essay through multiple cycles until high quality is achieved.
 """)
 
 # ============================================================================
@@ -70,20 +70,28 @@ with st.sidebar:
     st.divider()
 
     st.subheader("Iteration Limits")
-    max_planning = st.slider(
-        "Max Planning Iterations",
+    max_editing = st.slider(
+        "Max Editing Iterations",
         min_value=1,
         max_value=10,
         value=5,
-        help="Maximum times the planner can request more research"
+        help="Maximum times the editor can request research for the outline"
     )
 
-    max_writing = st.slider(
-        "Max Writing Iterations",
+    max_critique = st.slider(
+        "Max Critique Cycles",
         min_value=1,
         max_value=5,
         value=3,
-        help="Maximum times the writer can revise based on feedback"
+        help="Maximum full cycles through editor review → research/writing → critique"
+    )
+
+    max_writing = st.slider(
+        "Max Writing Iterations (per cycle)",
+        min_value=1,
+        max_value=3,
+        value=2,
+        help="Maximum revisions within a single critique cycle"
     )
 
     st.divider()
@@ -117,13 +125,17 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         "outline": "",
         "research_queries": [],
         "research_results": [],
-        "planning_iteration": 0,
-        "planning_complete": False,
+        "editing_iteration": 0,
+        "editing_complete": False,
         "draft": "",
         "feedback": "",
+        "editor_direction": "",
+        "editor_decision": "",
+        "critique_iteration": 0,
         "writing_iteration": 0,
-        "writing_complete": False,
-        "max_planning_iterations": max_planning,
+        "essay_complete": False,
+        "max_editing_iterations": max_editing,
+        "max_critique_iterations": max_critique,
         "max_writing_iterations": max_writing,
         "max_essay_length": max_length,
         "model_provider": provider,
@@ -188,26 +200,34 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             # ================================================================
             # Panel 1: OUTLINE
             # ================================================================
-            if node_name == "planner":
-                # Update status
-                if "planning_iteration" in node_output:
+            if node_name == "editor":
+                # Update status based on context
+                if "editing_iteration" in node_output:
                     outline_status.info(
-                        f"🔄 Planning Iteration: {node_output['planning_iteration']}/{max_planning}"
+                        f"🔄 Editing Iteration: {node_output['editing_iteration']}/{max_editing}"
+                    )
+                elif "critique_iteration" in node_output:
+                    outline_status.info(
+                        f"📝 Editor reviewing critique (Cycle {node_output['critique_iteration']}/{max_critique})"
                     )
                 else:
-                    outline_status.info("🔄 Generating outline...")
+                    outline_status.info("🔄 Editor working...")
 
                 # Update outline display if available
                 if "current_outline" in node_output and node_output["current_outline"]:
                     with outline_display:
                         st.markdown(node_output["current_outline"])
 
-                # Mark complete if planning is done
-                if node_output.get("planning_complete"):
+                # Mark complete if editing is done
+                if node_output.get("editing_complete"):
                     outline_status.success("✅ Outline complete - Ready for writing")
 
-            # Signal research panel when planner requests research
-            if node_name == "planner" and not node_output.get("planning_complete"):
+                # Show approval status
+                if node_output.get("essay_complete"):
+                    outline_status.success("✅ Essay approved by editor!")
+
+            # Signal research panel when editor requests research
+            if node_name == "editor" and not node_output.get("editing_complete") and node_output.get("draft", "") == "":
                 research_status.info("⏳ Waiting for research queries...")
 
             # ================================================================
@@ -228,7 +248,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     research_status.success(f"✅ Research complete - {len(node_output['current_research_highlights'])} results found")
 
             # Signal when transitioning from research to writing
-            if node_name == "researcher" and node_output.get("planning_complete"):
+            if node_name == "researcher" and node_output.get("editing_complete"):
                 draft_status.info("⏳ Research complete - Starting draft...")
 
             # ================================================================
@@ -236,9 +256,9 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             # ================================================================
             if node_name == "writer":
                 # Update status
-                if "writing_iteration" in node_output:
+                if "writing_iteration" in node_output and node_output["writing_iteration"] > 0:
                     draft_status.info(
-                        f"✍️ Writing Iteration: {node_output['writing_iteration']}/{max_writing}"
+                        f"✍️ Revising (Iteration {node_output['writing_iteration']}/{max_writing})"
                     )
                 else:
                     draft_status.info("✍️ Generating draft...")
@@ -252,8 +272,8 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 # Signal feedback panel that draft is ready
                 feedback_status.info("⏳ Draft ready - Awaiting critique...")
 
-                # Mark complete if writing is done
-                if node_output.get("writing_complete"):
+                # Mark complete if essay is done
+                if node_output.get("essay_complete"):
                     draft_status.success("✅ Draft complete and approved")
 
             # ================================================================

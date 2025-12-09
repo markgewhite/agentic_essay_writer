@@ -14,55 +14,50 @@ Graph structure:
 from typing import Literal
 from langgraph.graph import StateGraph, START, END
 from graph.state import EssayState
-from graph.nodes import planner_node, researcher_node, writer_node, critic_node
+from graph.nodes import editor_node, researcher_node, writer_node, critic_node
 
 
-def should_continue_planning(state: EssayState) -> Literal["continue", "complete"]:
+def route_after_editor(state: EssayState) -> Literal["researcher", "writer", "complete"]:
     """
-    Routing logic for planning loop.
+    Routing logic after editor node executes.
 
-    Continue planning if:
-    - planning_complete is False
-    - Haven't reached max iterations
+    The editor serves two roles:
+    1. Initial editing: Requests research until outline is ready
+    2. Critique review: Decides what to do after critic feedback
 
     Args:
         state: Current essay state
 
     Returns:
-        "continue" to loop back to planner, "complete" to move to writer
+        "researcher" - Need to gather (more) research
+        "writer" - Ready to write or revise
+        "complete" - Essay is approved
     """
-    if state["planning_complete"]:
-        return "complete"
+    # Context 1: Initial editing phase (no draft yet)
+    if state.get("draft", "") == "":
+        # Check if initial editing is complete
+        if state.get("editing_complete", False):
+            return "writer"  # Ready for first draft
+        else:
+            return "researcher"  # Need more research for outline
 
-    # Safety check: shouldn't happen but prevents infinite loops
-    if state["planning_iteration"] >= state["max_planning_iterations"]:
-        return "complete"
+    # Context 2: Reviewing critique (draft exists)
+    else:
+        # Check if essay is approved
+        if state.get("essay_complete", False):
+            return "complete"
 
-    return "continue"
+        # Safety check: max critique iterations
+        if state.get("critique_iteration", 0) >= state.get("max_critique_iterations", 3):
+            return "complete"
 
+        # Get editor's decision
+        decision = state.get("editor_decision", "revise")
 
-def should_continue_writing(state: EssayState) -> Literal["continue", "complete"]:
-    """
-    Routing logic for writing loop.
-
-    Continue writing if:
-    - writing_complete is False
-    - Haven't reached max iterations
-
-    Args:
-        state: Current essay state
-
-    Returns:
-        "continue" to loop back to writer, "complete" to end
-    """
-    if state["writing_complete"]:
-        return "complete"
-
-    # Safety check
-    if state["writing_iteration"] >= state["max_writing_iterations"]:
-        return "complete"
-
-    return "continue"
+        if decision == "research":
+            return "researcher"  # Commission more research
+        else:
+            return "writer"  # Revise with direction
 
 
 def create_essay_workflow():
@@ -71,17 +66,34 @@ def create_essay_workflow():
 
     Graph Structure:
 
-        START → planner → researcher → [conditional]
-                                        ├─> planner (if more research needed)
-                                        └─> writer → critic → [conditional]
-                                                               ├─> writer (if revisions needed)
-                                                               └─> END (if approved)
+        START → editor → researcher → [should_continue_editing?]
+                           ↑            ├─> editor (continue editing)
+                           │            └─> writer (editing complete)
+                           │                  ↓
+                           │               critic
+                           │                  ↓
+                           │               editor (review feedback)
+                           │                  ↓
+                           │            [route_editor_decision?]
+                           │            ├─> researcher (more research needed)
+                           │            ├─> writer (revise with direction)
+                           └────────────┘  └─> END (essay approved)
 
-    Two feedback loops:
-    1. Planning Loop: planner <-> researcher
-       - Continues until planner has sufficient research or max iterations
-    2. Writing Loop: writer <-> critic
-       - Continues until critic approves or max iterations
+    Three main phases:
+    1. Initial Editing Loop: editor <-> researcher
+       - Develops outline and commissions research
+       - Continues until editor is ready to write
+
+    2. First Draft: writer → critic → editor
+       - Writer creates draft
+       - Critic evaluates and provides feedback
+       - Editor reviews feedback
+
+    3. Revision Loop: editor → [researcher OR writer] → critic → editor
+       - Editor decides: more research, revise outline, or approve
+       - If research: researcher → writer (with new info)
+       - If revise: writer (with editor direction)
+       - Continues until editor approves or max iterations
 
     Returns:
         Compiled LangGraph that can be invoked or streamed
@@ -93,7 +105,7 @@ def create_essay_workflow():
     # ADD NODES
     # ========================================================================
 
-    graph.add_node("planner", planner_node)
+    graph.add_node("editor", editor_node)
     graph.add_node("researcher", researcher_node)
     graph.add_node("writer", writer_node)
     graph.add_node("critic", critic_node)
@@ -102,32 +114,26 @@ def create_essay_workflow():
     # DEFINE EDGES
     # ========================================================================
 
-    # Planning Loop: START → planner → researcher → conditional
-    graph.add_edge(START, "planner")
-    graph.add_edge("planner", "researcher")
+    # Main workflow: START → editor (makes all routing decisions)
+    graph.add_edge(START, "editor")
 
-    # Conditional routing after research
+    # Editor routes to researcher, writer, or END based on context
     graph.add_conditional_edges(
-        "researcher",
-        should_continue_planning,
+        "editor",
+        route_after_editor,
         {
-            "continue": "planner",    # More research/planning needed
-            "complete": "writer"      # Planning done, start writing
+            "researcher": "researcher",  # Need (more) research
+            "writer": "writer",          # Ready to write or revise
+            "complete": END              # Essay approved
         }
     )
 
-    # Writing Loop: writer → critic → conditional
+    # Researcher always returns to editor for evaluation
+    graph.add_edge("researcher", "editor")
+
+    # Writer → Critic → Editor (critique feedback loop)
     graph.add_edge("writer", "critic")
-
-    # Conditional routing after critique
-    graph.add_conditional_edges(
-        "critic",
-        should_continue_writing,
-        {
-            "continue": "writer",     # Revisions needed
-            "complete": END           # Essay approved/complete
-        }
-    )
+    graph.add_edge("critic", "editor")
 
     # ========================================================================
     # COMPILE

@@ -74,6 +74,77 @@ def parse_planner_response(content: str) -> Dict[str, Any]:
     }
 
 
+def parse_editor_review_response(content: str) -> Dict[str, Any]:
+    """
+    Parse editor review response when evaluating critic feedback.
+
+    Expected format:
+        EDITOR_DECISION: [research/revise/approve]
+        THESIS: [text]
+        OUTLINE: [text]
+        RESEARCH_NEEDED: Yes/No
+        QUERIES:
+        - [query 1]
+        - [query 2]
+        DIRECTION_TO_WRITER: [text]
+        REASONING: [text]
+
+    Args:
+        content: Raw text output from editor LLM when reviewing critique
+
+    Returns:
+        Dictionary with parsed fields:
+        - editor_decision (str): "research", "revise", or "approve"
+        - thesis (str)
+        - outline (str)
+        - research_needed (bool)
+        - new_queries (List[str])
+        - direction_to_writer (str)
+        - reasoning (str)
+    """
+    # Extract editor decision
+    decision_match = re.search(r'EDITOR_DECISION:\s*(research|revise|approve)', content, re.IGNORECASE)
+    editor_decision = decision_match.group(1).lower() if decision_match else "revise"
+
+    # Extract thesis
+    thesis_match = re.search(r'THESIS:\s*(.+?)(?=\n(?:OUTLINE|$))', content, re.DOTALL | re.IGNORECASE)
+    thesis = thesis_match.group(1).strip() if thesis_match else ""
+
+    # Extract outline
+    outline_match = re.search(r'OUTLINE:\s*(.+?)(?=\n(?:RESEARCH_NEEDED|$))', content, re.DOTALL | re.IGNORECASE)
+    outline = outline_match.group(1).strip() if outline_match else ""
+
+    # Extract research needed flag
+    research_match = re.search(r'RESEARCH_NEEDED:\s*(Yes|No)', content, re.IGNORECASE)
+    research_needed = research_match.group(1).lower() == "yes" if research_match else False
+
+    # Extract queries
+    queries = []
+    queries_match = re.search(r'QUERIES:\s*\n((?:[-•*]\s*.+\n?)+)', content, re.IGNORECASE)
+    if queries_match:
+        query_text = queries_match.group(1)
+        queries = re.findall(r'[-•*]\s*(.+)', query_text)
+        queries = [q.strip() for q in queries if q.strip()]
+
+    # Extract direction to writer
+    direction_match = re.search(r'DIRECTION_TO_WRITER:\s*(.+?)(?=\n(?:REASONING|$))', content, re.DOTALL | re.IGNORECASE)
+    direction_to_writer = direction_match.group(1).strip() if direction_match else ""
+
+    # Extract reasoning
+    reasoning_match = re.search(r'REASONING:\s*(.+?)$', content, re.DOTALL | re.IGNORECASE)
+    reasoning = reasoning_match.group(1).strip() if reasoning_match else ""
+
+    return {
+        "editor_decision": editor_decision,
+        "thesis": thesis,
+        "outline": outline,
+        "research_needed": research_needed,
+        "new_queries": queries,
+        "direction_to_writer": direction_to_writer,
+        "reasoning": reasoning
+    }
+
+
 def parse_critic_response(content: str) -> Dict[str, Any]:
     """
     Parse critic agent response expecting specific format markers.

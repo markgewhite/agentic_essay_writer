@@ -7,8 +7,8 @@ Each agent has a dictionary containing:
 """
 
 
-PLANNER_PROMPTS = {
-    "system": """You are an expert essay planner specializing in academic writing.
+EDITOR_PROMPTS = {
+    "system": """You are an expert essay editor specializing in academic writing.
 
 Your responsibilities:
 1. Analyze the topic and develop a clear, arguable thesis statement
@@ -105,6 +105,55 @@ then consider whether you need to ask different questions.
 
 If you have gone through several iterations and have asked all the questions needed and you are not getting
 any new meaningful insights and evidence, then you may proceed to writing and set READY_TO_WRITE to Yes.
+""",
+
+    "review_critique": """Topic: {topic}
+
+CURRENT THESIS: {thesis}
+
+CURRENT OUTLINE:
+{outline}
+
+ESSAY DRAFT:
+{draft}
+
+CRITIC'S FEEDBACK:
+{feedback}
+
+CRITIQUE ITERATION: {critique_iteration}/{max_critique_iterations}
+
+TASK: Review the critic's feedback on the essay draft and decide on the best course of action.
+
+As the editor, you have three options:
+
+1. COMMISSION MORE RESEARCH: If the critic identifies gaps in evidence, missing arguments, or areas needing more depth that require additional research, formulate new research queries to address these gaps.
+
+2. REVISE OUTLINE AND PROVIDE DIRECTION: If the critic's feedback suggests the outline needs adjustment (structure issues, missing sections, argument flow), revise the outline and provide clear direction to the writer on how to revise the draft.
+
+3. APPROVE FOR FINAL REVISION: If the feedback is minor and can be addressed with simple revisions (clarity, style, minor edits) without new research or structural changes, provide direction for the writer to make final revisions.
+
+Guidelines:
+- Commission research when: Evidence is missing, claims lack support, new perspectives needed, factual gaps exist
+- Revise outline when: Structure is flawed, arguments don't flow logically, sections are missing or poorly organized
+- Approve for revision when: Core content is sound, only minor improvements needed, no new information required
+
+Output format (follow this structure exactly):
+EDITOR_DECISION: [research / revise / approve]
+
+THESIS: [Keep current thesis or revise if needed based on feedback]
+
+OUTLINE: [Keep current outline or revise if needed based on feedback]
+
+RESEARCH_NEEDED: [Yes/No]
+
+QUERIES:
+- [Research query 1, if EDITOR_DECISION is "research"]
+- [Research query 2, if EDITOR_DECISION is "research"]
+- ...
+
+DIRECTION_TO_WRITER: [Clear, specific instructions on how to revise the draft. Reference the critic's feedback and explain what changes to make. If new research was commissioned, explain how to incorporate it.]
+
+REASONING: [Explain your decision - why this approach will address the critic's concerns most effectively]
 """
 }
 
@@ -211,16 +260,34 @@ TARGET LENGTH: {max_essay_length} words
 TASK: Write the initial essay draft following the outline exactly. Integrate the research findings to support your arguments. Aim for approximately {max_essay_length} words.
 """,
 
-    "revision": """CURRRENT DRAFT:
+    "revision": """CURRENT DRAFT:
 {draft}
+
+UPDATED OUTLINE:
+{outline}
 
 CRITIC FEEDBACK:
 {feedback}
 
-TARGET LENGTH: {max_essay_length} words
-CURRENT ITERATION: {iteration}/{max_iterations}
+EDITOR DIRECTION:
+{editor_direction}
 
-TASK: Revise the draft addressing ALL feedback points. Preserve the strengths identified and improve the areas that need work. Maintain overall coherence.
+NEW RESEARCH (if provided):
+{new_research}
+
+TARGET LENGTH: {max_essay_length} words
+CRITIQUE ITERATION: {critique_iteration}
+WRITING ITERATION: {iteration}/{max_iterations}
+
+TASK: Revise the draft following the editor's direction and addressing the critic's feedback.
+
+Important:
+- Follow the editor's specific instructions carefully
+- If new research was provided, integrate it to address gaps identified by the critic
+- If the outline was updated, ensure the essay structure matches the new outline
+- Address ALL points raised in the critic's feedback
+- Preserve the strengths identified by the critic
+- Maintain overall essay coherence while making improvements
 """
 }
 

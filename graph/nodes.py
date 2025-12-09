@@ -11,78 +11,129 @@ Each node follows the pattern:
 
 from graph.state import EssayState
 from config.models import get_llm
-from config.prompts import PLANNER_PROMPTS, WRITER_PROMPTS, CRITIC_PROMPTS, RESEARCHER_PROMPTS
+from config.prompts import EDITOR_PROMPTS, WRITER_PROMPTS, CRITIC_PROMPTS, RESEARCHER_PROMPTS
 from graph.tools import format_research_results, summarize_research, execute_research
-from utils.parsers import parse_planner_response, parse_critic_response, estimate_word_count
+from utils.parsers import parse_planner_response, parse_editor_review_response, parse_critic_response, estimate_word_count
 from langchain_core.messages import HumanMessage, AIMessage
 
 
-def planner_node(state: EssayState) -> dict:
+def editor_node(state: EssayState) -> dict:
     """
-    Planner agent develops thesis and outline, requests research.
+    Editor agent performs two roles based on workflow context:
 
-    Decision logic:
-    - Iteration 0: Analyze topic, identify research needs
-    - Later iterations: Evaluate research, refine outline
-    - Set planning_complete=True when satisfied or max iterations reached
+    1. Initial Editing (when draft is empty):
+       - Develops thesis and outline
+       - Requests research to support arguments
+       - Refines based on research results
+
+    2. Critique Review (when draft exists with feedback):
+       - Reviews critic's feedback
+       - Decides: commission research, revise outline, or approve for revision
+       - Provides direction to writer
 
     Args:
         state: Current essay state
 
     Returns:
-        Dict with updated: thesis, outline, research_queries, planning_iteration,
-        planning_complete, current_outline (for streaming), messages
+        Dict with updated state fields depending on context
     """
     # Get LLM
     llm = get_llm(state["model_provider"], state["model_name"])
 
-    # Build context from previous research
-    research_context = format_research_results(state["research_results"])
+    # Determine context: Are we in initial editing or reviewing a critique?
+    is_reviewing_critique = (state.get("draft", "") != "" and
+                            state.get("feedback", "") != "")
 
-    # Select appropriate prompt based on iteration
-    if state["planning_iteration"] == 0:
-        prompt_key = "initial"
+    if is_reviewing_critique:
+        # ====================================================================
+        # CONTEXT: Reviewing critic feedback on a draft
+        # ====================================================================
+
+        user_message = EDITOR_PROMPTS["review_critique"].format(
+            topic=state['topic'],
+            thesis=state['thesis'],
+            outline=state['outline'],
+            draft=state['draft'],
+            feedback=state['feedback'],
+            critique_iteration=state['critique_iteration'] + 1,
+            max_critique_iterations=state['max_critique_iterations']
+        )
+
+        messages = [
+            HumanMessage(content=EDITOR_PROMPTS["system"]),
+            HumanMessage(content=user_message)
+        ]
+
+        response = llm.invoke(messages)
+        parsed = parse_editor_review_response(response.content)
+
+        # Increment critique iteration
+        new_critique_iteration = state["critique_iteration"] + 1
+
+        # Check if we should end (max iterations reached or editor approves)
+        essay_complete = (
+            parsed["editor_decision"] == "approve" or
+            new_critique_iteration >= state["max_critique_iterations"]
+        )
+
+        return {
+            "thesis": parsed["thesis"],
+            "outline": parsed["outline"],
+            "research_queries": parsed["new_queries"],
+            "editor_direction": parsed["direction_to_writer"],
+            "editor_decision": parsed["editor_decision"],
+            "critique_iteration": new_critique_iteration,
+            "essay_complete": essay_complete,
+            "writing_iteration": 0,  # Reset writing iteration for new cycle
+            "current_outline": parsed["outline"]  # For streaming to UI
+        }
+
     else:
-        prompt_key = "subsequent"
+        # ====================================================================
+        # CONTEXT: Initial editing phase (developing outline and research)
+        # ====================================================================
 
-    # Construct user message using appropriate template
-    user_message = PLANNER_PROMPTS[prompt_key].format(
-        topic=state['topic'],
-        iteration=state['planning_iteration'] + 1,
-        max_iterations=state['max_planning_iterations'],
-        research_context=research_context
-    )
+        research_context = format_research_results(state["research_results"])
 
-    # Create messages for LLM
-    messages = [
-        HumanMessage(content=PLANNER_PROMPTS["system"]),
-        HumanMessage(content=user_message)
-    ]
+        # Select appropriate prompt
+        if state["editing_iteration"] == 0:
+            prompt_key = "initial"
+        else:
+            prompt_key = "subsequent"
 
-    # Invoke LLM
-    response = llm.invoke(messages)
+        user_message = EDITOR_PROMPTS[prompt_key].format(
+            topic=state['topic'],
+            iteration=state['editing_iteration'] + 1,
+            max_iterations=state['max_editing_iterations'],
+            research_context=research_context
+        )
 
-    # Parse response
-    parsed = parse_planner_response(response.content)
+        messages = [
+            HumanMessage(content=EDITOR_PROMPTS["system"]),
+            HumanMessage(content=user_message)
+        ]
 
-    # Increment iteration
-    new_iteration = state["planning_iteration"] + 1
+        response = llm.invoke(messages)
+        parsed = parse_planner_response(response.content)
 
-    # Determine completion with multiple safety mechanisms
-    is_complete = (
-        parsed["ready_to_write"] or                       # Agent decides ready
-        new_iteration >= state["max_planning_iterations"] or  # Hard limit
-        len(parsed["new_queries"]) == 0                   # No more queries
-    )
+        # Increment iteration
+        new_iteration = state["editing_iteration"] + 1
 
-    return {
-        "thesis": parsed["thesis"],
-        "outline": parsed["outline"],
-        "research_queries": parsed["new_queries"],
-        "planning_iteration": new_iteration,
-        "planning_complete": is_complete,
-        "current_outline": parsed["outline"]  # For streaming to UI
-    }
+        # Determine completion
+        is_complete = (
+            parsed["ready_to_write"] or
+            new_iteration >= state["max_editing_iterations"] or
+            len(parsed["new_queries"]) == 0
+        )
+
+        return {
+            "thesis": parsed["thesis"],
+            "outline": parsed["outline"],
+            "research_queries": parsed["new_queries"],
+            "editing_iteration": new_iteration,
+            "editing_complete": is_complete,
+            "current_outline": parsed["outline"]  # For streaming to UI
+        }
 
 
 def researcher_node(state: EssayState) -> dict:
@@ -194,11 +245,30 @@ def writer_node(state: EssayState) -> dict:
         )
 
     else:
-        # Revision based on feedback
+        # Revision based on feedback and editor direction
+        # Summarize any new research (from latest queries)
+        new_research_summary = ""
+        if state.get("research_queries"):
+            # If there are pending queries, that means new research was just gathered
+            # Get only the most recent research results
+            all_results = state.get("research_results", [])
+            num_queries = len(state.get("research_queries", []))
+            if num_queries > 0 and len(all_results) >= num_queries:
+                recent_results = all_results[-num_queries:]
+                new_research_summary = summarize_research(recent_results)
+            else:
+                new_research_summary = "No new research was commissioned for this revision."
+        else:
+            new_research_summary = "No new research was commissioned for this revision."
+
         user_message = WRITER_PROMPTS["revision"].format(
             draft=state['draft'],
+            outline=state['outline'],
             feedback=state['feedback'],
+            editor_direction=state.get('editor_direction', 'Please address the critic\\'s feedback.'),
+            new_research=new_research_summary,
             max_essay_length=state['max_essay_length'],
+            critique_iteration=state.get('critique_iteration', 1),
             iteration=state['writing_iteration'],
             max_iterations=state['max_writing_iterations']
         )

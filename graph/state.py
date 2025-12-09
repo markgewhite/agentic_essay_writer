@@ -13,9 +13,15 @@ class EssayState(TypedDict):
     """
     Comprehensive state for the multi-agent essay writing workflow.
 
-    The state flows through two distinct feedback loops:
-    1. Planning Loop: planner <-> researcher
-    2. Writing Loop: writer <-> critic
+    The workflow follows this pattern:
+    1. Editor develops outline and requests research
+    2. Researcher gathers information
+    3. Writer creates draft based on outline and research
+    4. Critic evaluates draft and provides feedback
+    5. Editor reviews feedback and decides: more research, revise, or approve
+
+    This creates a feedback loop where the editor can commission additional research
+    or provide direction for revisions based on the critic's assessment.
 
     State fields are automatically managed by LangGraph, with the 'messages' field
     using the add_messages reducer for automatic message accumulation.
@@ -29,40 +35,46 @@ class EssayState(TypedDict):
     topic: str
 
     # ============================================================================
-    # PLANNING LOOP STATE
+    # EDITORIAL/RESEARCH STATE
     # ============================================================================
 
-    # Core planning outputs
-    thesis: str                              # Developed by planner
+    # Core editorial outputs
+    thesis: str                              # Developed by editor
     outline: str                             # Structured essay outline
 
     # Research coordination
-    research_queries: List[str]              # Queries requested by planner
+    research_queries: List[str]              # Queries requested by editor
     research_results: List[dict]             # Results from Tavily searches
 
-    # Loop control
-    planning_iteration: int                  # Current planning iteration
-    planning_complete: bool                  # Flag to exit planning loop
+    # Editorial control
+    editing_iteration: int                   # Current editing iteration (research requests)
+    editing_complete: bool                   # Flag when initial outline is complete
 
     # ============================================================================
-    # WRITING LOOP STATE
+    # WRITING/CRITIQUE STATE
     # ============================================================================
 
     # Core writing outputs
     draft: str                               # Current essay draft
     feedback: str                            # Critic's feedback
 
+    # Editor direction to writer
+    editor_direction: str                    # Instructions from editor for revision
+    editor_decision: str                     # Editor's decision: "research", "revise", or "approve"
+
     # Loop control
-    writing_iteration: int                   # Current writing iteration
-    writing_complete: bool                   # Flag to exit writing loop
+    critique_iteration: int                  # Full cycles through editor→write→critique
+    writing_iteration: int                   # Revisions within a critique cycle
+    essay_complete: bool                     # Flag when essay is approved
 
     # ============================================================================
     # CONFIGURATION
     # ============================================================================
 
-    # Iteration limits (separate for each loop)
-    max_planning_iterations: int
-    max_writing_iterations: int
+    # Iteration limits
+    max_editing_iterations: int              # Max research/outline iterations
+    max_critique_iterations: int             # Max full critique cycles
+    max_writing_iterations: int              # Max revisions per critique cycle
 
     # Essay parameters
     max_essay_length: int                    # Target word count
@@ -76,7 +88,7 @@ class EssayState(TypedDict):
     # ============================================================================
 
     # These fields are updated by agents for display in Streamlit
-    current_outline: str                     # Updated by planner
+    current_outline: str                     # Updated by editor
     current_feedback: str                    # Updated by critic
     current_research_highlights: List[dict]  # Updated by researcher - preview of results
     current_draft: str                       # Updated by writer - current draft text
