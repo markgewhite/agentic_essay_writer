@@ -85,17 +85,20 @@ def format_research_results(results: List[Dict]) -> str:
         formatted += f"Query {i}: \"{result['query']}\"\n"
 
         if "error" in result:
-            formatted += f"  Error: {result['error']}\n\n"
+            formatted += f"  Error: {result['error']}\n"
+            # Add separator between queries even for errors
+            if i < len(results):
+                formatted += "\n" + ("*" * 80) + "\n\n"
             continue
 
         # Use LLM-generated summary if available, otherwise fall back to raw content
         if "summary" in result:
             formatted += "Summary:\n"
-            formatted += f"{result['summary']}\n\n"
+            formatted += f"{result['summary']}\n"
         else:
             # Fallback to raw content (legacy support)
             formatted += "Findings:\n"
-            for item in result.get('results', []):
+            for j, item in enumerate(result.get('results', []), 1):
                 title = item.get('title', 'N/A')
                 content = item.get('raw_content', item.get('content', 'N/A'))
                 url = item.get('url', 'N/A')
@@ -103,10 +106,15 @@ def format_research_results(results: List[Dict]) -> str:
                 #if len(content) > 2000:
                 #    content = content[:2000] + "..."
 
-                formatted += f"  - {title}\n"
-                formatted += f"    {content}\n"
-                formatted += f"    Source: {url}\n"
-            formatted += "\n"
+                formatted += f"  Source {j}: {title}\n"
+                formatted += f"  URL: {url}\n"
+                formatted += f"  {content}\n"
+                # Separator between sources within the same query
+                formatted += "  " + ("-" * 76) + "\n"
+
+        # Add clear separator between queries (asterisks)
+        if i < len(results):
+            formatted += "\n" + ("*" * 80) + "\n\n"
 
     return formatted
 
@@ -136,13 +144,13 @@ def summarize_research(results: List[Dict]) -> str:
 
     summary = "KEY RESEARCH FINDINGS:\n\n"
 
-    for result in results:
+    for idx, result in enumerate(results, 1):
         if "error" not in result:
-            summary += f"On '{result['query']}':\n"
+            summary += f"Query {idx}: '{result['query']}'\n"
 
             # Use LLM-generated summary if available
             if "summary" in result:
-                summary += f"{result['summary']}\n\n"
+                summary += f"{result['summary']}\n"
             else:
                 # Fallback to raw content (legacy support)
                 for item in result.get('results', [])[:3]:
@@ -152,7 +160,10 @@ def summarize_research(results: List[Dict]) -> str:
                     #    content = content[:1500] + "..."
 
                     summary += f"- {content}\n"
-                summary += "\n"
+
+            # Add clear separator between queries (asterisks)
+            if idx < len(results):
+                summary += "\n" + ("*" * 80) + "\n\n"
 
     return summary
 

@@ -122,7 +122,9 @@ def researcher_node(state: EssayState) -> dict:
                 if len(content) > 5000:
                     content = content[:5000] + "..."
 
+                # Add clear separators between sources within a query
                 research_content += f"\n[Source {i}] {title}\nURL: {url}\n{content}\n"
+                research_content += "\n" + "-" * 80 + "\n"  # Separator between sources
 
             # Build context message using template
             context_message = RESEARCHER_PROMPTS["user"].format(
