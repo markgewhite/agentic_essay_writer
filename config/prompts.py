@@ -90,11 +90,21 @@ CURRENT ITERATION: {iteration}/{max_iterations}
 RESEARCH CONTEXT:
 {research_context}
 
-TASK: Review the research results and decide if you have sufficient information to create a complete outline, or if you need additional research.
+TASK: Review the research results carefully and revise your thesis, outline and main points accordingly. 
+ 
+Note that often the initial thesis is wrong because preconceptions are not supported by the evidence.
+When you change your thesis, you must revise your main points accordingly 
+and consider whether the structure is still correct. If not, please revise it.
 
-Please revise your thesis and outline based on the evidence gathered.
-Formulate additional research queries, as needed.
-If you have sufficient research to proceed with writing, set READY_TO_WRITE to Yes.
+Formulate additional research queries based on the findings so far.
+Identify what you need to know more about - those areas that need more depth.
+Identify what you still don't know. Having gathered information it may become more apparent what you don't know.
+
+If you are finding that the research is not providing any significant new evidence or arguments,
+then consider whether you need to ask different questions. 
+
+If you have gone through several iterations and have asked all the questions needed and you are not getting
+any new meaningful insights and evidence, then you may proceed to writing and set READY_TO_WRITE to Yes.
 """
 }
 

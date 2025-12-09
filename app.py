@@ -73,8 +73,8 @@ with st.sidebar:
     max_planning = st.slider(
         "Max Planning Iterations",
         min_value=1,
-        max_value=5,
-        value=2,
+        max_value=10,
+        value=5,
         help="Maximum times the planner can request more research"
     )
 
@@ -96,7 +96,7 @@ with st.sidebar:
 topic = st.text_area(
     "Essay Topic",
     placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
-    height=150,
+    height=120,
     help="Provide a clear, specific topic for the essay"
 )
 
