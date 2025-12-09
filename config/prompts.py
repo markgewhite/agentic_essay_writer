@@ -19,12 +19,17 @@ Your responsibilities:
 6. Decide when sufficient research has been gathered to proceed with writing
 
 When requesting research:
-- Formulate specific, focused queries (not too broad or vague)
-- Target different aspects of the topic to get comprehensive coverage
+- Formulate queries that are open-ended and do not seek to confirm a preconception (confirmation bias)
+- Seek a range of different views, some which may support or oppose your thesis
+- Look for supporting evidence for and against each main point in the outline
 - Request 2-5 queries per iteration to gather diverse perspectives
+- Formulate new queries based on previous research to delve deeper into the topic
 - Consider gaps in current research when formulating new queries
 
 When evaluating research:
+- Assess whether the research supports or refutes your thesis and arguments
+- Revise your outline accordingly based on available research evidence
+- Restructure the essay outline and revise the thesis accordingly
 - Assess whether research covers all main arguments in your outline
 - Identify gaps in evidence or areas needing more support
 - Determine if sufficient credible sources exist to write a strong essay
@@ -53,24 +58,29 @@ V. Conclusion
    - [Final thoughts/implications]
 
 RESEARCH_NEEDED: [Yes/No]
+
 QUERIES:
 - [Specific research query 1]
 - [Specific research query 2]
 - [Specific research query 3]
+- ...
 
 READY_TO_WRITE: [Yes/No]
+
 REASONING: [Explain why you're ready to write or what additional research is needed]
 """,
 
     "user": """Topic: {topic}
 
-Current Iteration: {iteration}/{max_iterations}
+CURRENT ITERATION: {iteration}/{max_iterations}
 
+RESEARCH CONTEXT:
 {research_context}
 
-Task: {task}
+TASK: {task}
 
-Please provide your thesis, outline, and any additional research queries needed.
+Please revise your thesis, outline based the evidence gathered.
+Formulate additional research queries, as needed.
 If you have sufficient research to proceed with writing, set READY_TO_WRITE to Yes.
 """
 }
@@ -115,11 +125,11 @@ Output format:
 
     "user": """Essay Topic: {topic}
 
-Current Thesis: {thesis}
+CURRENT THESIS: {thesis}
 
-Research Query: {query}
+RESEARCH QUERY: {query}
 
-Raw Research Findings:
+RAW RESEARCH FINDINGS:
 {research_content}"""
 }
 
@@ -163,31 +173,31 @@ Output format:
 - Use clear paragraph breaks between sections
 """,
 
-    "initial_draft": """Topic: {topic}
+    "initial_draft": """TOPIC: {topic}
 
-Thesis: {thesis}
+THESIS: {thesis}
 
-Outline:
+OUTLINE:
 {outline}
 
-Research Summary:
+RESEARCH SUMMARY:
 {research_summary}
 
-Target Length: {max_essay_length} words
+TARGET LENGTH: {max_essay_length} words
 
-Task: Write the initial essay draft following the outline exactly. Integrate the research findings to support your arguments. Aim for approximately {max_essay_length} words.
+TASK: Write the initial essay draft following the outline exactly. Integrate the research findings to support your arguments. Aim for approximately {max_essay_length} words.
 """,
 
-    "revision": """Current Draft:
+    "revision": """CURRRENT DRAFT:
 {draft}
 
-Critic Feedback:
+CRITIC FEEDBACK:
 {feedback}
 
-Target Length: {max_essay_length} words
-Current Iteration: {iteration}/{max_iterations}
+TARGET LENGTH: {max_essay_length} words
+CURRENT ITERATION: {iteration}/{max_iterations}
 
-Task: Revise the draft addressing ALL feedback points. Preserve the strengths identified and improve the areas that need work. Maintain overall coherence.
+TASK: Revise the draft addressing ALL feedback points. Preserve the strengths identified and improve the areas that need work. Maintain overall coherence.
 """
 }
 
@@ -258,19 +268,19 @@ APPROVED: [Yes/No]
 REASON: [If approved: why it meets standards. If not approved: what critical improvements are still needed]
 """,
 
-    "user": """Essay Draft:
+    "user": """ESSAY DRAFT:
 {draft}
 
-Original Outline:
+ORIGINAL OUTLINE:
 {outline}
 
-Thesis:
+THESIS:
 {thesis}
 
-Target Length: {max_essay_length} words
-Current Word Count: ~{word_count} words
-Current Iteration: {iteration}/{max_iterations}
+TARGET LENGTH: {max_essay_length} words
+CURRENT WORD COUNT: ~{word_count} words
+CURRENT ITERATION: {iteration}/{max_iterations}
 
-Task: Evaluate the draft thoroughly against all criteria. Provide specific, actionable feedback. If the essay meets high standards, approve it. If not, identify specific improvements needed.
+TASK: Evaluate the draft thoroughly against all criteria. Provide specific, actionable feedback. If the essay meets high standards, approve it. If not, identify specific improvements needed.
 """
 }
