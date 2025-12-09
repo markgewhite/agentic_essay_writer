@@ -192,7 +192,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 # Update status
                 if "planning_iteration" in node_output:
                     outline_status.info(
-                        f"📍 Planning Iteration: {node_output['planning_iteration']}/{max_planning}"
+                        f"🔄 Planning Iteration: {node_output['planning_iteration']}/{max_planning}"
                     )
                 else:
                     outline_status.info("🔄 Generating outline...")
@@ -204,7 +204,11 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
                 # Mark complete if planning is done
                 if node_output.get("planning_complete"):
-                    outline_status.success("✅ Outline complete")
+                    outline_status.success("✅ Outline complete - Ready for writing")
+
+            # Signal research panel when planner requests research
+            if node_name == "planner" and not node_output.get("planning_complete"):
+                research_status.info("⏳ Waiting for research queries...")
 
             # ================================================================
             # Panel 2: RESEARCH HIGHLIGHTS
@@ -221,7 +225,11 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                             st.text(highlight['preview'])
                             st.markdown("---")
 
-                    research_status.success(f"✅ Found {len(node_output['current_research_highlights'])} research results")
+                    research_status.success(f"✅ Research complete - {len(node_output['current_research_highlights'])} results found")
+
+            # Signal when transitioning from research to writing
+            if node_name == "researcher" and node_output.get("planning_complete"):
+                draft_status.info("⏳ Research complete - Starting draft...")
 
             # ================================================================
             # Panel 3: DRAFT
@@ -230,7 +238,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 # Update status
                 if "writing_iteration" in node_output:
                     draft_status.info(
-                        f"📍 Writing Iteration: {node_output['writing_iteration']}/{max_writing}"
+                        f"✍️ Writing Iteration: {node_output['writing_iteration']}/{max_writing}"
                     )
                 else:
                     draft_status.info("✍️ Generating draft...")
@@ -241,9 +249,12 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     with draft_display:
                         st.markdown(node_output["current_draft"])
 
+                # Signal feedback panel that draft is ready
+                feedback_status.info("⏳ Draft ready - Awaiting critique...")
+
                 # Mark complete if writing is done
                 if node_output.get("writing_complete"):
-                    draft_status.success("✅ Draft complete")
+                    draft_status.success("✅ Draft complete and approved")
 
             # ================================================================
             # Panel 4: CRITICAL FEEDBACK
@@ -258,10 +269,10 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                         st.markdown(node_output["current_feedback"])
 
                     # Check if essay passed
-                    if "essay passed" in node_output["current_feedback"].lower():
+                    if "essay passed" in node_output["current_feedback"].lower() or "approved" in node_output["current_feedback"].lower():
                         feedback_status.success("✅ Essay approved!")
                     else:
-                        feedback_status.warning("⚠️ Revisions requested")
+                        feedback_status.warning("⚠️ Revisions requested - Returning to writer...")
 
         # ====================================================================
         # DISPLAY FINAL ESSAY
