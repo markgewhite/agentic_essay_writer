@@ -40,23 +40,30 @@ def main():
         "outline": "",
         "research_queries": [],
         "research_results": [],
-        "planning_iteration": 0,
-        "planning_complete": False,
+        "editing_iteration": 0,
+        "editing_complete": False,
         "draft": "",
         "feedback": "",
+        "editor_direction": "",
+        "editor_decision": "",
+        "critique_iteration": 0,
         "writing_iteration": 0,
-        "writing_complete": False,
-        "max_planning_iterations": 2,
+        "essay_complete": False,
+        "max_editing_iterations": 2,
+        "max_critique_iterations": 2,
         "max_writing_iterations": 2,
         "max_essay_length": 1500,
         "model_provider": "openai",  # Change to your preferred provider
         "model_name": "gpt-4o-mini",  # Change to your preferred model
         "current_outline": "",
-        "current_feedback": ""
+        "current_feedback": "",
+        "current_research_highlights": [],
+        "current_draft": ""
     }
 
     print("Initial State:")
-    print(f"  - Max planning iterations: {initial_state['max_planning_iterations']}")
+    print(f"  - Max editing iterations: {initial_state['max_editing_iterations']}")
+    print(f"  - Max critique cycles: {initial_state['max_critique_iterations']}")
     print(f"  - Max writing iterations: {initial_state['max_writing_iterations']}")
     print(f"  - Model: {initial_state['model_provider']} - {initial_state['model_name']}")
     print(f"  - Target length: {initial_state['max_essay_length']} words\n")
@@ -82,13 +89,18 @@ def main():
             print("-" * 40)
 
             # Display relevant information based on node type
-            if node_name == "planner":
-                print(f"Planning Iteration: {node_output.get('planning_iteration', 'N/A')}")
-                print(f"Planning Complete: {node_output.get('planning_complete', 'N/A')}")
+            if node_name == "editor":
+                print(f"Editing Iteration: {node_output.get('editing_iteration', 'N/A')}")
+                print(f"Editing Complete: {node_output.get('editing_complete', 'N/A')}")
+                print(f"Critique Iteration: {node_output.get('critique_iteration', 'N/A')}")
+                print(f"Essay Complete: {node_output.get('essay_complete', 'N/A')}")
+                print(f"Editor Decision: {node_output.get('editor_decision', 'N/A')}")
                 if node_output.get('current_outline'):
                     print(f"Outline Preview: {node_output['current_outline'][:200]}...")
                 if node_output.get('research_queries'):
                     print(f"Research Queries: {node_output['research_queries']}")
+                if node_output.get('editor_direction'):
+                    print(f"Direction to Writer: {node_output['editor_direction'][:150]}...")
 
             elif node_name == "researcher":
                 print(f"Research Results Count: {len(node_output.get('research_results', []))}")
@@ -105,8 +117,8 @@ def main():
                     final_draft = node_output['draft']
 
             elif node_name == "critic":
-                print(f"Writing Iteration: {node_output.get('writing_iteration', 'N/A')}")
-                print(f"Writing Complete: {node_output.get('writing_complete', 'N/A')}")
+                print(f"Critique Iteration: {node_output.get('critique_iteration', 'N/A')}")
+                print(f"Essay Complete: {node_output.get('essay_complete', 'N/A')}")
                 if node_output.get('current_feedback'):
                     feedback_preview = node_output['current_feedback'][:200].replace('\n', ' ')
                     print(f"Feedback Preview: {feedback_preview}...")
@@ -134,10 +146,11 @@ def main():
 
         if final_state:
             print("\nFinal State Summary:")
-            print(f"  - Planning iterations completed: {final_state.get('planning_iteration', 'N/A')}")
+            print(f"  - Editing iterations completed: {final_state.get('editing_iteration', 'N/A')}")
+            print(f"  - Critique cycles completed: {final_state.get('critique_iteration', 'N/A')}")
             print(f"  - Writing iterations completed: {final_state.get('writing_iteration', 'N/A')}")
-            print(f"  - Planning complete: {final_state.get('planning_complete', 'N/A')}")
-            print(f"  - Writing complete: {final_state.get('writing_complete', 'N/A')}")
+            print(f"  - Editing complete: {final_state.get('editing_complete', 'N/A')}")
+            print(f"  - Essay complete: {final_state.get('essay_complete', 'N/A')}")
 
     except Exception as e:
         print(f"\n✗ Error during workflow execution: {e}")

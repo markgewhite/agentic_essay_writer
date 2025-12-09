@@ -265,7 +265,7 @@ def writer_node(state: EssayState) -> dict:
             draft=state['draft'],
             outline=state['outline'],
             feedback=state['feedback'],
-            editor_direction=state.get('editor_direction', 'Please address the critic\\'s feedback.'),
+            editor_direction=state.get('editor_direction', 'Please address the critic\'s feedback.'),
             new_research=new_research_summary,
             max_essay_length=state['max_essay_length'],
             critique_iteration=state.get('critique_iteration', 1),
