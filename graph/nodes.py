@@ -70,11 +70,9 @@ def editor_node(state: EssayState) -> dict:
         # Increment critique iteration
         new_critique_iteration = state["critique_iteration"] + 1
 
-        # Check if we should end (max iterations reached or editor approves)
-        essay_complete = (
-            parsed["editor_decision"] == "approve" or
-            new_critique_iteration >= state["max_critique_iterations"]
-        )
+        # Only mark complete if editor explicitly approves
+        # (The routing function will handle max iterations safety check)
+        essay_complete = (parsed["editor_decision"] == "approve")
 
         return {
             "thesis": parsed["thesis"],
