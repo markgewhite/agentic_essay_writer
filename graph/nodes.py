@@ -147,9 +147,20 @@ def researcher_node(state: EssayState) -> dict:
     # Append to existing research results
     all_results = state.get("research_results", []) + results
 
+    # Prepare highlights for UI display (first 200 chars of each summary)
+    highlights = []
+    for result in results:
+        if "error" not in result and "summary" in result:
+            preview = {
+                "query": result["query"],
+                "preview": result["summary"][:200] + "..." if len(result["summary"]) > 200 else result["summary"]
+            }
+            highlights.append(preview)
+
     return {
         "research_results": all_results,
-        "research_queries": []  # Clear queries after execution
+        "research_queries": [],  # Clear queries after execution
+        "current_research_highlights": highlights  # For streaming to UI
     }
 
 
@@ -204,6 +215,7 @@ def writer_node(state: EssayState) -> dict:
     return {
         "draft": response.content,
         "writing_iteration": state["writing_iteration"] + 1,
+        "current_draft": response.content,  # For streaming to UI
         "messages": [response]
     }
 

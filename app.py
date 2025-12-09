@@ -129,26 +129,43 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         "model_provider": provider,
         "model_name": model,
         "current_outline": "",
-        "current_feedback": ""
+        "current_feedback": "",
+        "current_research_highlights": [],
+        "current_draft": ""
     }
 
     # ========================================================================
-    # CREATE UI CONTAINERS FOR REAL-TIME UPDATES
+    # CREATE UI CONTAINERS FOR REAL-TIME UPDATES - 2x2 GRID
     # ========================================================================
 
     st.header("🔄 Generation Progress")
 
+    # Create 2x2 grid layout
     col1, col2 = st.columns(2)
 
+    # Top row: Outline (left) and Research Highlights (right)
     with col1:
-        st.subheader("📋 Planning & Research")
-        planning_status = st.empty()
-        outline_display = st.empty()
+        st.subheader("📋 Outline")
+        outline_status = st.empty()
+        outline_display = st.container(height=400)
 
     with col2:
-        st.subheader("✍️ Writing & Critique")
-        writing_status = st.empty()
-        feedback_display = st.empty()
+        st.subheader("🔍 Research Highlights")
+        research_status = st.empty()
+        research_display = st.container(height=400)
+
+    # Bottom row: Draft (left) and Critical Feedback (right)
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.subheader("✍️ Draft")
+        draft_status = st.empty()
+        draft_display = st.container(height=400)
+
+    with col4:
+        st.subheader("💭 Critical Feedback")
+        feedback_status = st.empty()
+        feedback_display = st.container(height=400)
 
     st.divider()
 
@@ -168,45 +185,83 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             node_name = list(event.keys())[0]
             node_output = event[node_name]
 
-            # Update planning section
-            if node_name in ["planner", "researcher"]:
-                # Update outline display if available
-                if "current_outline" in node_output and node_output["current_outline"]:
-                    with outline_display.container():
-                        st.markdown("**Current Outline:**")
-                        st.markdown(node_output["current_outline"])
-
-                # Update iteration counter
+            # ================================================================
+            # Panel 1: OUTLINE
+            # ================================================================
+            if node_name == "planner":
+                # Update status
                 if "planning_iteration" in node_output:
-                    planning_status.info(
+                    outline_status.info(
                         f"📍 Planning Iteration: {node_output['planning_iteration']}/{max_planning}"
                     )
+                else:
+                    outline_status.info("🔄 Generating outline...")
 
-                # Show when researcher is working
-                if node_name == "researcher":
-                    planning_status.info("🔍 Researcher gathering web data...")
+                # Update outline display if available
+                if "current_outline" in node_output and node_output["current_outline"]:
+                    with outline_display:
+                        st.markdown(node_output["current_outline"])
 
-            # Update writing section
-            if node_name in ["writer", "critic"]:
-                # Update feedback display if available
-                if "current_feedback" in node_output and node_output["current_feedback"]:
-                    with feedback_display.container():
-                        st.markdown("**Critic Feedback:**")
-                        st.markdown(node_output["current_feedback"])
+                # Mark complete if planning is done
+                if node_output.get("planning_complete"):
+                    outline_status.success("✅ Outline complete")
 
-                # Update iteration counter
+            # ================================================================
+            # Panel 2: RESEARCH HIGHLIGHTS
+            # ================================================================
+            if node_name == "researcher":
+                # Update status
+                research_status.info("🔍 Gathering research from the web...")
+
+                # Display research highlights using the prepared highlights
+                if "current_research_highlights" in node_output and node_output["current_research_highlights"]:
+                    with research_display:
+                        for i, highlight in enumerate(node_output["current_research_highlights"], 1):
+                            st.markdown(f"**Query {i}:** {highlight['query']}")
+                            st.text(highlight['preview'])
+                            st.markdown("---")
+
+                    research_status.success(f"✅ Found {len(node_output['current_research_highlights'])} research results")
+
+            # ================================================================
+            # Panel 3: DRAFT
+            # ================================================================
+            if node_name == "writer":
+                # Update status
                 if "writing_iteration" in node_output:
-                    writing_status.info(
+                    draft_status.info(
                         f"📍 Writing Iteration: {node_output['writing_iteration']}/{max_writing}"
                     )
+                else:
+                    draft_status.info("✍️ Generating draft...")
 
-                # Show when writer is working
-                if node_name == "writer":
-                    writing_status.info("✍️ Writer generating/revising draft...")
+                # Update draft display if available
+                if "current_draft" in node_output and node_output["current_draft"]:
+                    final_draft = node_output["current_draft"]
+                    with draft_display:
+                        st.markdown(node_output["current_draft"])
 
-            # Track the draft whenever writer node emits it
-            if node_name == "writer" and "draft" in node_output:
-                final_draft = node_output["draft"]
+                # Mark complete if writing is done
+                if node_output.get("writing_complete"):
+                    draft_status.success("✅ Draft complete")
+
+            # ================================================================
+            # Panel 4: CRITICAL FEEDBACK
+            # ================================================================
+            if node_name == "critic":
+                # Update status
+                feedback_status.info("💭 Evaluating draft quality...")
+
+                # Update feedback display if available
+                if "current_feedback" in node_output and node_output["current_feedback"]:
+                    with feedback_display:
+                        st.markdown(node_output["current_feedback"])
+
+                    # Check if essay passed
+                    if "essay passed" in node_output["current_feedback"].lower():
+                        feedback_status.success("✅ Essay approved!")
+                    else:
+                        feedback_status.warning("⚠️ Revisions requested")
 
         # ====================================================================
         # DISPLAY FINAL ESSAY

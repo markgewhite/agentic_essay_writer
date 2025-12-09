@@ -78,3 +78,5 @@ class EssayState(TypedDict):
     # These fields are updated by agents for display in Streamlit
     current_outline: str                     # Updated by planner
     current_feedback: str                    # Updated by critic
+    current_research_highlights: List[dict]  # Updated by researcher - preview of results
+    current_draft: str                       # Updated by writer - current draft text
