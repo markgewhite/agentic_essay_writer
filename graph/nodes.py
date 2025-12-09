@@ -81,8 +81,7 @@ def planner_node(state: EssayState) -> dict:
         "research_queries": parsed["new_queries"],
         "planning_iteration": new_iteration,
         "planning_complete": is_complete,
-        "current_outline": parsed["outline"],  # For streaming to UI
-        "messages": [response]
+        "current_outline": parsed["outline"]  # For streaming to UI
     }
 
 
@@ -216,8 +215,7 @@ def writer_node(state: EssayState) -> dict:
     return {
         "draft": response.content,
         "writing_iteration": state["writing_iteration"] + 1,
-        "current_draft": response.content,  # For streaming to UI
-        "messages": [response]
+        "current_draft": response.content  # For streaming to UI
     }
 
 
@@ -276,6 +274,5 @@ def critic_node(state: EssayState) -> dict:
     return {
         "feedback": parsed["feedback"],
         "writing_complete": is_complete,
-        "current_feedback": parsed["feedback"],  # For streaming to UI
-        "messages": [response]
+        "current_feedback": parsed["feedback"]  # For streaming to UI
     }
