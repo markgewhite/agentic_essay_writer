@@ -210,6 +210,12 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     # ========================================================================
 
     try:
+        # Initialize all panels to idle state
+        outline_status.info("⏸️ Editor: Idle")
+        research_status.info("⏸️ Researcher: Idle")
+        draft_status.info("⏸️ Writer: Idle")
+        feedback_status.info("⏸️ Critic: Idle")
+
         # Track the final draft as we stream
         final_draft = None
 
@@ -220,20 +226,28 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             node_output = event[node_name]
 
             # ================================================================
-            # Panel 1: OUTLINE
+            # Panel 1: OUTLINE (Editor)
             # ================================================================
             if node_name == "editor":
+                # Set other agents to idle
+                research_status.info("⏸️ Researcher: Idle")
+                draft_status.info("⏸️ Writer: Idle")
+                feedback_status.info("⏸️ Critic: Idle")
+
                 # Update status based on context
-                if "editing_iteration" in node_output:
+                if node_output.get("draft", "") == "":
+                    # Initial editing phase
                     outline_status.info(
-                        f"🔄 Editing Iteration: {node_output['editing_iteration']}/{max_editing}"
+                        f"🔄 Editor: Working on outline (Iteration {node_output.get('editing_iteration', 1)}/{max_editing})"
                     )
-                elif "critique_iteration" in node_output:
-                    outline_status.info(
-                        f"📝 Editor reviewing critique (Cycle {node_output['critique_iteration']}/{max_critique})"
-                    )
+                elif node_output.get("editor_decision") == "pass_to_writer":
+                    # Just received research, passing to writer
+                    outline_status.info("🔄 Editor: Preparing research for writer")
                 else:
-                    outline_status.info("🔄 Editor working...")
+                    # Reviewing critique
+                    outline_status.info(
+                        f"🔄 Editor: Reviewing critique (Cycle {node_output.get('critique_iteration', 1)}/{max_critique})"
+                    )
 
                 # Update outline display if available
                 if "current_outline" in node_output and node_output["current_outline"]:
@@ -241,23 +255,24 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                         st.markdown(node_output["current_outline"])
 
                 # Mark complete if editing is done
-                if node_output.get("editing_complete"):
-                    outline_status.success("✅ Outline complete - Ready for writing")
+                if node_output.get("editing_complete") and node_output.get("draft", "") == "":
+                    outline_status.success("✅ Editor: Outline complete")
 
                 # Show approval status
                 if node_output.get("essay_complete"):
-                    outline_status.success("✅ Essay approved by editor!")
-
-            # Signal research panel when editor requests research
-            if node_name == "editor" and not node_output.get("editing_complete") and node_output.get("draft", "") == "":
-                research_status.info("⏳ Waiting for research queries...")
+                    outline_status.success("✅ Editor: Essay approved!")
 
             # ================================================================
-            # Panel 2: RESEARCH HIGHLIGHTS
+            # Panel 2: RESEARCH HIGHLIGHTS (Researcher)
             # ================================================================
-            if node_name == "researcher":
+            elif node_name == "researcher":
                 # Update status
-                research_status.info("🔍 Gathering research from the web...")
+                research_status.info("🔍 Researcher: Gathering web research...")
+
+                # Set others to idle
+                outline_status.info("⏸️ Editor: Idle")
+                draft_status.info("⏸️ Writer: Idle")
+                feedback_status.info("⏸️ Critic: Idle")
 
                 # Display research highlights using the prepared highlights
                 if "current_research_highlights" in node_output and node_output["current_research_highlights"]:
@@ -267,23 +282,24 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                             st.text(highlight['preview'])
                             st.markdown("---")
 
-                    research_status.success(f"✅ Research complete - {len(node_output['current_research_highlights'])} results found")
-
-            # Signal when transitioning from research to writing
-            if node_name == "researcher" and node_output.get("editing_complete"):
-                draft_status.info("⏳ Research complete - Starting draft...")
+                    research_status.success(f"✅ Researcher: Complete ({len(node_output['current_research_highlights'])} results)")
 
             # ================================================================
-            # Panel 3: DRAFT
+            # Panel 3: DRAFT (Writer)
             # ================================================================
-            if node_name == "writer":
+            elif node_name == "writer":
+                # Set others to idle
+                outline_status.info("⏸️ Editor: Idle")
+                research_status.info("⏸️ Researcher: Idle")
+                feedback_status.info("⏸️ Critic: Idle")
+
                 # Update status
-                if "writing_iteration" in node_output and node_output["writing_iteration"] > 0:
+                if node_output.get("writing_iteration", 0) > 1:
                     draft_status.info(
-                        f"✍️ Revising (Iteration {node_output['writing_iteration']}/{max_writing})"
+                        f"✍️ Writer: Revising draft (Iteration {node_output['writing_iteration']}/{max_writing})"
                     )
                 else:
-                    draft_status.info("✍️ Generating draft...")
+                    draft_status.info("✍️ Writer: Generating draft...")
 
                 # Update draft display if available
                 if "current_draft" in node_output and node_output["current_draft"]:
@@ -291,30 +307,27 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     with draft_display:
                         st.markdown(node_output["current_draft"])
 
-                # Signal feedback panel that draft is ready
-                feedback_status.info("⏳ Draft ready - Awaiting critique...")
-
-                # Mark complete if essay is done
-                if node_output.get("essay_complete"):
-                    draft_status.success("✅ Draft complete and approved")
+                    draft_status.success("✅ Writer: Draft complete")
 
             # ================================================================
-            # Panel 4: CRITICAL FEEDBACK
+            # Panel 4: CRITICAL FEEDBACK (Critic)
             # ================================================================
-            if node_name == "critic":
+            elif node_name == "critic":
+                # Set others to idle
+                outline_status.info("⏸️ Editor: Idle")
+                research_status.info("⏸️ Researcher: Idle")
+                draft_status.info("⏸️ Writer: Idle")
+
                 # Update status
-                feedback_status.info("💭 Evaluating draft quality...")
+                feedback_status.info("💭 Critic: Evaluating draft quality...")
 
                 # Update feedback display if available
                 if "current_feedback" in node_output and node_output["current_feedback"]:
                     with feedback_display:
                         st.markdown(node_output["current_feedback"])
 
-                    # Check if essay passed
-                    if "essay passed" in node_output["current_feedback"].lower() or "approved" in node_output["current_feedback"].lower():
-                        feedback_status.success("✅ Essay approved!")
-                    else:
-                        feedback_status.warning("⚠️ Revisions requested - Returning to writer...")
+                    # Mark complete
+                    feedback_status.success("✅ Critic: Evaluation complete")
 
         # ====================================================================
         # DISPLAY FINAL ESSAY
