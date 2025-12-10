@@ -331,11 +331,13 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
             # Metadata expander
             with st.expander("📊 Generation Metadata", expanded=False):
-                # Note: These values would come from final state
-                # For now, showing placeholders
                 st.write(f"**Topic:** {topic}")
-                st.write(f"**Model:** {provider.capitalize()} - {model}")
                 st.write(f"**Target Length:** {max_length} words")
+                st.write("**Models Used:**")
+                st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
+                st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
+                st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
+                st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
 
             # Display the essay
             # Note: We need to track the final draft from the last writer node output
