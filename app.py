@@ -6,7 +6,11 @@ Provides configuration options and real-time streaming of agent progress.
 
 import streamlit as st
 import asyncio
+import nest_asyncio
 from dotenv import load_dotenv
+
+# Allow nested event loops (needed for Streamlit + async)
+nest_asyncio.apply()
 from graph.workflow import create_essay_workflow
 from graph.state import create_initial_state
 from config.models import AVAILABLE_MODELS, get_model_by_id
@@ -220,13 +224,22 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         # Track the final draft as we stream
         final_draft = None
 
-        # Use astream_events() to get real-time node start/end events
-        async def stream_workflow():
+        # Use astream_events with nest_asyncio for real-time streaming
+        async def stream_events():
             async for event in workflow.astream_events(initial_state, version="v2"):
                 yield event
 
-        # Run async streaming in Streamlit
-        for event in asyncio.run(stream_workflow()):
+        # Create event loop and iterate (nest_asyncio allows this in Streamlit)
+        loop = asyncio.get_event_loop()
+        async_gen = stream_events()
+
+        # Process events as they arrive
+        while True:
+            try:
+                event = loop.run_until_complete(async_gen.__anext__())
+            except StopAsyncIteration:
+                break
+
             event_type = event.get("event")
             metadata = event.get("metadata", {})
             node_name = metadata.get("langgraph_node")
