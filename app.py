@@ -83,7 +83,7 @@ with st.sidebar:
         "Critic Model",
         options=model_ids,
         format_func=lambda x: next(m["display"] for m in AVAILABLE_MODELS if m["id"] == x),
-        index=get_index_by_id("claude-sonnet-4-5-latest"),  # Default (different perspective)
+        index=get_index_by_id("claude-sonnet-4.5"),  # Default (different perspective)
         help="Model for evaluating draft quality and providing feedback"
     )
 

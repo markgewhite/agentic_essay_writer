@@ -20,9 +20,9 @@ AVAILABLE_MODELS = [
     {"id": "gpt-5.1", "display": "GPT-5.1 (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},  # $1.25/MTok
 
     # Anthropic Models
-    {"id": "claude-haiku-4-5-latest", "display": "Claude 4.5 Haiku (Anthropic)", "provider": "anthropic", "name": "claude-4-5-haiku-latest"}, # $1.00/MTok
-    {"id": "claude-sonnet-4-5-latest", "display": "Claude 4.5 Sonnet (Anthropic)", "provider": "anthropic", "name": "claude-4-5-sonnet-latest"}, # $3.00/MTok
-    {"id": "claude-opus-4-5-latest", "display": "Claude 4.5 Opus (Anthropic)", "provider": "anthropic", "name": "claude-4-5-opus-latest"},  # $5.00/MTok
+    {"id": "claude-haiku-4.5", "display": "Claude 4.5 Haiku (Anthropic)", "provider": "anthropic", "name": "claude-haiku-4-5-20251001"}, # $1.00/MTok
+    {"id": "claude-sonnet-4.5", "display": "Claude 4.5 Sonnet (Anthropic)", "provider": "anthropic", "name": "claude-sonnet-4-5-20250929"}, # $3.00/MTok
+    {"id": "claude-opus-4.5", "display": "Claude 4.5 Opus (Anthropic)", "provider": "anthropic", "name": "claude-opus-4-5-20251101"},  # $15.00/MTok
 
     # Google Models
     {"id": "gemini-flash-2.5-lite", "display": "Gemini 2.5 Flash Lite (Google)", "provider": "google", "name": "gemini-2.5-flash-lite"}, # $0.10/MTok

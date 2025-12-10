@@ -174,10 +174,10 @@ from config.models import get_model_by_id
 # Create initial state with per-agent models
 state = create_initial_state(
     topic="Test topic",
-    editor_model=get_model_by_id("gpt-4o"),
+    editor_model=get_model_by_id("gpt-5.1"),
     researcher_model=get_model_by_id("gpt-5-nano"),
     writer_model=get_model_by_id("gpt-5-mini"),
-    critic_model=get_model_by_id("claude-sonnet-4-5-latest"),
+    critic_model=get_model_by_id("claude-sonnet-4.5"),
     max_editing_iterations=2,
     max_critique_iterations=2,
     max_writing_iterations=2
