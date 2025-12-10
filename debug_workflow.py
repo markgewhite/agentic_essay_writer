@@ -36,10 +36,10 @@ def main():
 
     # Configure models for each agent
     # Tip: Use cheaper models (gpt-4o-mini) for researcher to reduce costs
-    editor_model = get_model_by_id("gpt-4o")
-    researcher_model = get_model_by_id("gpt-4o-mini")  # Cheap model recommended
-    writer_model = get_model_by_id("gpt-4o")
-    critic_model = get_model_by_id("gpt-4o")
+    editor_model = get_model_by_id("gpt-5.1"),  # Default (most intelligent)
+    researcher_model = get_model_by_id("gpt-5-nano"),  # Default (cheapest for summarization)
+    writer_model = get_model_by_id("gpt-5-mini"),  # Default (balance of intelligence and cost)
+    critic_model = get_model_by_id("claude-sonnet-4-5-latest"),  # Default (different perspective)
 
     # Initialize state using centralized helper function
     initial_state = create_initial_state(
@@ -58,7 +58,10 @@ def main():
     print(f"  - Max editing iterations: {initial_state['max_editing_iterations']}")
     print(f"  - Max critique cycles: {initial_state['max_critique_iterations']}")
     print(f"  - Max writing iterations: {initial_state['max_writing_iterations']}")
-    print(f"  - Model: {initial_state['model_provider']} - {initial_state['model_name']}")
+    print(f"  - Editor model: {initial_state['editor_model']['provider']} - {initial_state['editor_model']['name']}")
+    print(f"  - Researcher model: {initial_state['researcher_model']['provider']} - {initial_state['researcher_model']['name']}")
+    print(f"  - Writer model: {initial_state['writer_model']['provider']} - {initial_state['writer_model']['name']}")
+    print(f"  - Critic model: {initial_state['critic_model']['provider']} - {initial_state['critic_model']['name']}")
     print(f"  - Target length: {initial_state['max_essay_length']} words\n")
 
     # Track the final draft

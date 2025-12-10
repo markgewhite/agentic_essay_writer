@@ -167,23 +167,24 @@ Web interface with real-time progress updates.
 You can test agents in isolation:
 
 ```python
-from graph.state import EssayState
-from graph.nodes import planner_node
-from config.models import get_llm
+from graph.state import create_initial_state
+from graph.nodes import editor_node
+from config.models import get_model_by_id
 
-# Create minimal state
-state = {
-    "topic": "Test topic",
-    "messages": [],
-    "planning_iteration": 0,
-    "research_results": [],
-    "max_planning_iterations": 2,
-    "model_provider": "openai",
-    "model_name": "gpt-4o-mini"
-}
+# Create initial state with per-agent models
+state = create_initial_state(
+    topic="Test topic",
+    editor_model=get_model_by_id("gpt-4o"),
+    researcher_model=get_model_by_id("gpt-5-nano"),
+    writer_model=get_model_by_id("gpt-5-mini"),
+    critic_model=get_model_by_id("claude-sonnet-4-5-latest"),
+    max_editing_iterations=2,
+    max_critique_iterations=2,
+    max_writing_iterations=2
+)
 
-# Test planner
-result = planner_node(state)
+# Test editor
+result = editor_node(state)
 print(result["outline"])
 ```
 

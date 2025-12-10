@@ -17,12 +17,12 @@ AVAILABLE_MODELS = [
     {"id": "gpt-5-nano", "display": "GPT-5 Nano (OpenAI)", "provider": "openai", "name": "gpt-5-nano"}, # $0.05/MTok
     {"id": "gpt-4o-mini", "display": "GPT-4o Mini (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},# $0.15/MTok
     {"id": "gpt-5-mini", "display": "GPT-5 Mini (OpenAI)", "provider": "openai", "name": "gpt-5-mini"},  # $0.25/MTok
-    {"id": "gpt-4o-mini", "display": "GPT-4o Mini (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},  # $0.15/MTok
+    {"id": "gpt-5.1", "display": "GPT-5.1 (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},  # $1.25/MTok
 
     # Anthropic Models
-    {"id": "claude-haiku-4.5", "display": "Claude 4.5 Haiku (Anthropic)", "provider": "anthropic", "name": "claude-4-5-haiku-latest"}, # $1.00/MTok
-    {"id": "claude-sonnet-4.5", "display": "Claude 4.5 Sonnet (Anthropic)", "provider": "anthropic", "name": "claude-4-5-sonnet-latest"}, # $3.00/MTok
-    {"id": "claude-opus-4.5", "display": "Claude 4.5 Opus (Anthropic)", "provider": "anthropic", "name": "claude-4-5-opus-latest"},  # $5.00/MTok
+    {"id": "claude-haiku-4-5-latest", "display": "Claude 4.5 Haiku (Anthropic)", "provider": "anthropic", "name": "claude-4-5-haiku-latest"}, # $1.00/MTok
+    {"id": "claude-sonnet-4-5-latest", "display": "Claude 4.5 Sonnet (Anthropic)", "provider": "anthropic", "name": "claude-4-5-sonnet-latest"}, # $3.00/MTok
+    {"id": "claude-opus-4-5-latest", "display": "Claude 4.5 Opus (Anthropic)", "provider": "anthropic", "name": "claude-4-5-opus-latest"},  # $5.00/MTok
 
     # Google Models
     {"id": "gemini-flash-2.5-lite", "display": "Gemini 2.5 Flash Lite (Google)", "provider": "google", "name": "gemini-2.5-flash-lite"}, # $0.10/MTok
@@ -112,5 +112,5 @@ def get_llm(provider: str, model: str, temperature: float = 0.7):
     else:
         raise ValueError(
             f"Unknown provider: {provider}. "
-            f"Supported providers: {list(MODEL_CONFIGS.keys())}"
+            f"Supported providers: openai, anthropic, google"
         )
