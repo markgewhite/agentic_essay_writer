@@ -51,14 +51,13 @@ def get_model_by_id(model_id: str) -> dict:
     raise ValueError(f"Model ID '{model_id}' not found in AVAILABLE_MODELS")
 
 
-def get_llm(provider: str, model: str, temperature: float = 0.7):
+def get_llm(provider: str, model: str):
     """
     Get LLM instance based on provider and model.
 
     Args:
         provider: One of "openai", "anthropic", "google"
         model: Model name from MODEL_CONFIGS
-        temperature: Temperature setting (0.0 to 1.0)
 
     Returns:
         Configured LLM instance (ChatOpenAI, ChatAnthropic, or ChatGoogleGenerativeAI)
@@ -67,7 +66,7 @@ def get_llm(provider: str, model: str, temperature: float = 0.7):
         ValueError: If provider unknown or API key missing
 
     Example:
-        >>> llm = get_llm("openai", "gpt-4o", temperature=0.7)
+        >>> llm = get_llm("openai", "gpt-4o")
         >>> response = llm.invoke([{"role": "user", "content": "Hello"}])
     """
     if provider == "openai":
@@ -79,7 +78,6 @@ def get_llm(provider: str, model: str, temperature: float = 0.7):
             )
         return ChatOpenAI(
             model=model,
-            temperature=temperature,
             api_key=api_key
         )
 
@@ -92,7 +90,6 @@ def get_llm(provider: str, model: str, temperature: float = 0.7):
             )
         return ChatAnthropic(
             model=model,
-            temperature=temperature,
             api_key=api_key
         )
 
@@ -105,7 +102,6 @@ def get_llm(provider: str, model: str, temperature: float = 0.7):
             )
         return ChatGoogleGenerativeAI(
             model=model,
-            temperature=temperature,
             google_api_key=api_key
         )
 
