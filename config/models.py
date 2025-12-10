@@ -51,13 +51,14 @@ def get_model_by_id(model_id: str) -> dict:
     raise ValueError(f"Model ID '{model_id}' not found in AVAILABLE_MODELS")
 
 
-def get_llm(provider: str, model: str):
+def get_llm(provider: str, model: str, max_tokens: int = 12000):
     """
     Get LLM instance based on provider and model.
 
     Args:
         provider: One of "openai", "anthropic", "google"
         model: Model name from MODEL_CONFIGS
+        max_tokens: Maximum tokens for output (default 12000 for long essays with citations)
 
     Returns:
         Configured LLM instance (ChatOpenAI, ChatAnthropic, or ChatGoogleGenerativeAI)
@@ -66,7 +67,8 @@ def get_llm(provider: str, model: str):
         ValueError: If provider unknown or API key missing
 
     Example:
-        >>> llm = get_llm("openai", "gpt-4o")
+        >>> llm = get_llm("openai", "gpt-4o")  # Uses default 12000 tokens
+        >>> llm = get_llm("anthropic", "claude-sonnet-4-5-20250929", max_tokens=8000)
         >>> response = llm.invoke([{"role": "user", "content": "Hello"}])
     """
     if provider == "openai":
@@ -78,7 +80,8 @@ def get_llm(provider: str, model: str):
             )
         return ChatOpenAI(
             model=model,
-            api_key=api_key
+            api_key=api_key,
+            max_tokens=max_tokens
         )
 
     elif provider == "anthropic":
@@ -90,7 +93,8 @@ def get_llm(provider: str, model: str):
             )
         return ChatAnthropic(
             model=model,
-            api_key=api_key
+            api_key=api_key,
+            max_tokens=max_tokens
         )
 
     elif provider == "google":
@@ -102,7 +106,8 @@ def get_llm(provider: str, model: str):
             )
         return ChatGoogleGenerativeAI(
             model=model,
-            google_api_key=api_key
+            google_api_key=api_key,
+            max_output_tokens=max_tokens  # Google uses different parameter name
         )
 
     else:
