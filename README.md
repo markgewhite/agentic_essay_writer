@@ -1,304 +1,380 @@
 # Multi-Agent Essay Writer
 
-AI-powered essay writing application using LangGraph's multi-agent architecture with real-time feedback loops.
+> **An advanced agentic AI system demonstrating sophisticated multi-agent orchestration, adaptive workflows, and intelligent decision-making.**
 
-## Overview
+A production-ready essay writing application built with LangGraph's multi-agent architecture, featuring an **Editor-orchestrated workflow** where agents collaborate through iterative feedback loops with intelligent routing decisions.
 
-This application uses four specialized AI agents working together to research, plan, write, and refine essays:
+## 🎯 Project Goals
 
-- **Planner Agent**: Analyzes topics, develops thesis statements, and creates detailed outlines
-- **Researcher Agent**: Gathers web-based research using Tavily search
-- **Writer Agent**: Generates and revises essay drafts based on outlines and research
-- **Critic Agent**: Evaluates essay quality and provides specific feedback for improvements
+This project demonstrates:
+- **Agentic Programming**: Building autonomous AI systems that make decisions and adapt behavior
+- **Multi-Agent Orchestration**: Coordinating specialized agents with complex routing logic
+- **Production Engineering**: Real-time streaming, per-agent model optimization, comprehensive monitoring
+- **LangGraph Mastery**: Advanced state management, conditional edges, and workflow patterns
 
-The system employs two iterative feedback loops:
-1. **Planning Loop**: Planner ↔ Researcher (until sufficient research is gathered)
-2. **Writing Loop**: Writer ↔ Critic (until essay meets quality standards)
+*Inspired by concepts from the Zero To Mastery (ZTM) LLM course and extended with production-grade features.*
 
-## Architecture
+## 🏗️ Architecture Overview
+
+### The Four-Agent System
 
 ```
-START → Planner → Researcher → [Planning Loop]
-                                 ↓ (outline ready)
-                              Writer → Critic → [Writing Loop]
-                                                   ↓ (approved)
-                                                  END
+                    ┌──────────────────────────────────────┐
+                    │        EDITOR (Orchestrator)         │
+                    │  • Develops thesis & outline         │
+                    │  • Commissions research              │
+                    │  • Reviews critique & decides action │
+                    │  • Strategic decision-making         │
+                    └──────────────┬───────────────────────┘
+                                   │
+                 ┌─────────────────┼─────────────────┐
+                 │                 │                 │
+                 ▼                 ▼                 ▼
+         ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+         │  RESEARCHER  │  │    WRITER    │  │    CRITIC    │
+         │  Tavily Web  │  │ Draft & Edit │  │  Evaluates   │
+         │   Research   │  │    Essays    │  │   Quality    │
+         └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
-Built with:
-- **LangGraph**: Multi-agent workflow orchestration
-- **Tavily**: Web research and information gathering
-- **LangSmith**: Performance monitoring and tracing
-- **Streamlit**: Interactive web interface
-- **Multiple LLM Providers**: OpenAI, Anthropic, Google
+### Intelligent Workflow Routing
 
-## Features
+The **Editor** makes adaptive decisions based on workflow state:
 
-- 📝 Automated essay research, planning, and writing
-- 🔄 Iterative refinement through agent feedback
-- 🎯 Separate iteration controls for planning and writing phases
-- 📊 Real-time streaming of planner outlines and critic feedback
-- 🤖 Support for multiple LLM providers (OpenAI, Anthropic, Google)
-- 📥 Download completed essays
-- 📈 LangSmith monitoring integration
-- ☁️ Ready for deployment on Render.com
+**Phase 1: Initial Editing**
+```
+START → Editor → Researcher → Editor → ... (iterate until outline ready)
+                                       ↓
+                                    Writer (when ready)
+```
 
-## Installation
+**Phase 2: Critique & Revision Cycle**
+```
+Writer → Critic → Editor → (decision)
+                            ├─> Researcher (more research needed)
+                            ├─> Writer (revise with direction)
+                            └─> END (essay approved)
+```
+
+### Key Innovation: Editor Decision-Making
+
+Unlike simple linear workflows, the **Editor** reviews critic feedback and decides:
+- **"research"**: Commission additional research to strengthen arguments
+- **"revise"**: Provide direction for writer to address feedback
+- **"approve"**: Essay meets quality standards
+
+This creates a **dynamic, adaptive workflow** that responds to essay quality in real-time.
+
+## ✨ Features
+
+### Core Capabilities
+- 📝 **Automated Research & Writing**: From topic to polished essay
+- 🧠 **Intelligent Agent Orchestration**: Editor-driven adaptive workflow
+- 🔄 **Multi-Phase Feedback Loops**: Separate editing and critique cycles
+- ⚡ **Real-Time Streaming UI**: Watch agents work with live status updates
+
+### Advanced Features
+- 🎛️ **Per-Agent Model Configuration**: Optimize cost vs. quality per agent
+- 📊 **LangSmith Integration**: Full traceability and performance monitoring
+- 🌐 **Multi-Provider Support**: OpenAI, Anthropic (Claude), Google (Gemini)
+- 💰 **Cost Optimization**: Use cheap models for research, premium for critical thinking
+- 🔍 **Web Research**: Tavily integration for current, factual information
+- 📈 **Configurable Iteration Limits**: Control loops per editing/critique cycle
+
+### Production Ready
+- 🚀 **Streamlit Web Interface**: Professional, responsive UI
+- ☁️ **Cloud Deployment**: Configured for Render.com
+- 🛡️ **Error Handling**: Robust parsing and validation
+- 📦 **Clean Architecture**: Modular, maintainable codebase
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- API keys for:
-  - At least one LLM provider (OpenAI, Anthropic, or Google)
-  - Tavily (for web research)
-  - LangSmith (optional, for monitoring)
+- **Python 3.11+**
+- **API Keys**:
+  - At least one LLM provider (OpenAI / Anthropic / Google)
+  - [Tavily](https://tavily.com/) for web research
+  - [LangSmith](https://smith.langchain.com/) (optional, for monitoring)
 
-### Setup
+### Installation
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
+# Clone repository
+git clone <your-repo-url>
 cd essay_writer
-```
 
-2. Create a virtual environment:
-```bash
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-3. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-4. Configure environment variables:
-```bash
+# Configure environment
 cp .env.example .env
+# Edit .env with your API keys
 ```
 
-5. Edit `.env` and add your API keys:
-```bash
-# Required
-OPENAI_API_KEY=sk-...
-TAVILY_API_KEY=tvly-...
+### Configuration
 
-# Optional (for other providers)
+Create `.env` file:
+
+```bash
+# LLM Providers (at least one required)
+OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 GOOGLE_API_KEY=...
 
-# Optional (for monitoring)
+# Research (required)
+TAVILY_API_KEY=tvly-...
+
+# Monitoring (optional but recommended)
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=lsv2_pt_...
-LANGCHAIN_PROJECT=essay-writer-dev
+LANGCHAIN_PROJECT=essay-writer
 ```
 
-## Usage
+### Run
 
-### Running Locally
-
-Start the Streamlit application:
 ```bash
 streamlit run app.py
 ```
 
-The app will open in your browser at `http://localhost:8501`.
+Navigate to `http://localhost:8501`
 
-### Using the Application
+## 💡 Usage Guide
 
-1. **Configure Settings** (in sidebar):
-   - Select model provider (OpenAI, Anthropic, or Google)
-   - Choose specific model
-   - Set target essay length (500-5000 words)
-   - Set max planning iterations (1-5)
-   - Set max writing iterations (1-5)
+### Model Selection Strategy
 
-2. **Enter Topic**:
-   - Provide a clear, specific essay topic
-   - Example: "Analyze the impact of artificial intelligence on modern education systems"
+**Cost Optimization Example:**
+- **Editor**: GPT-5.1 (most intelligent for strategic decisions)
+- **Researcher**: GPT-5 Nano ($0.05/MTok - processes 50K tokens per research cycle!)
+- **Writer**: GPT-5 Mini (balanced intelligence/cost)
+- **Critic**: Claude Sonnet 4.5 (different perspective, rigorous evaluation)
 
-3. **Generate Essay**:
-   - Click "Generate Essay" button
-   - Watch real-time progress in two columns:
-     - Left: Planning & Research updates
-     - Right: Writing & Critique updates
+The researcher agent uses ~50,000 tokens **per research request** (summarizing web results). Using cheap models here saves significant costs!
 
-4. **Review & Download**:
-   - View final essay
-   - Download as .txt file
+### Workflow Controls
 
-## Project Structure
+**Iteration Limits:**
+- **Max Editing Iterations** (1-10): Research/outline refinement cycles
+- **Max Critique Cycles** (1-5): Full editor review → write/research → critique cycles
+- **Max Writing Iterations** (1-3): Revisions within a single critique cycle
+
+**Target Length:** 500-5000 words
+
+### Generating Essays
+
+1. **Configure models** per agent (left sidebar)
+2. **Set iteration limits** and target length
+3. **Enter topic**: Be specific (e.g., "Analyze AI's impact on modern education")
+4. **Generate**: Watch real-time progress
+5. **Download**: Get final essay as .txt file
+
+## 📁 Project Structure
 
 ```
 essay_writer/
-├── app.py                        # Streamlit interface
+├── app.py                          # Streamlit UI with real-time streaming
+├── debug_workflow.py               # CLI testing script
+│
 ├── config/
-│   ├── models.py                 # LLM provider configurations
-│   └── prompts.py                # System prompts for agents
+│   ├── models.py                   # Multi-provider model registry & per-agent config
+│   └── prompts.py                  # System prompts for each agent
+│
 ├── graph/
-│   ├── state.py                  # State schema (TypedDict)
-│   ├── nodes.py                  # Agent implementations
-│   ├── tools.py                  # Tavily integration
-│   └── workflow.py               # LangGraph construction
+│   ├── state.py                    # EssayState TypedDict + create_initial_state()
+│   ├── nodes.py                    # Agent implementations (editor, researcher, writer, critic)
+│   ├── tools.py                    # Tavily research integration
+│   └── workflow.py                 # LangGraph construction + routing logic
+│
 ├── utils/
-│   └── parsers.py                # Response parsing utilities
-├── requirements.txt              # Python dependencies
-├── render.yaml                   # Render.com deployment config
-├── .env.example                  # Environment template
-└── README.md                     # This file
+│   └── parsers.py                  # Response parsing for multi-provider LLMs
+│
+├── requirements.txt                # Python dependencies
+├── render.yaml                     # Cloud deployment configuration
+└── README.md                       # This file
 ```
 
-## Key Design Decisions
+## 🔧 Technical Deep Dive
 
 ### State Management
-- Single comprehensive state object with fields for both loops
-- Separate iteration counters for independent loop control
-- Boolean completion flags for explicit loop termination
-- Dedicated streaming fields for real-time UI updates
 
-### Loop Termination
-Multiple safety mechanisms:
-- Agent-driven completion (planner/critic decide when done)
-- Hard iteration limits (user-configurable)
-- Empty query list for planning loop
+**Comprehensive State Object** (`EssayState`):
+- **Editorial State**: `thesis`, `outline`, `research_queries`, `research_results`
+- **Writing State**: `draft`, `feedback`, `editor_direction`, `editor_decision`
+- **Control State**: Iteration counters, completion flags, node history
+- **Model Config**: Per-agent model specifications
+- **Streaming Fields**: Real-time UI updates
 
-### Response Parsing
-- Text-based parsing with clear format markers
-- More robust across different LLM providers than JSON mode
-- Regex-based extraction with fallbacks
+### Routing Logic
 
-### Model Provider Abstraction
-- Unified `get_llm()` function with provider parameter
-- Runtime model switching without code changes
-- Easy to add new providers
+**Conditional Routing After Editor** (`route_after_editor`):
 
-## Deployment
+```python
+def route_after_editor(state):
+    # Initial editing: no draft yet
+    if not state["draft"]:
+        return "writer" if state["editing_complete"] else "researcher"
 
-### Render.com
+    # Critique review: draft exists
+    if state["essay_complete"]:
+        return END
 
-This application is configured for deployment on Render.com.
+    decision = state["editor_decision"]
+    return {
+        "research": "researcher",      # Commission more research
+        "pass_to_writer": "writer",    # Pass new research to writer
+        "revise": "writer",            # Revise with editor direction
+        "approve": END                 # Essay approved
+    }[decision]
+```
 
-1. Push code to GitHub repository
+**Deterministic Routing:**
+- Researcher → Editor (always)
+- Writer → Critic (always)
+- Critic → Editor (always)
 
-2. Connect repository to Render.com
+### Node History Tracking
 
-3. Render will automatically detect `render.yaml` configuration
+To prevent routing bugs (e.g., editor approving immediately after commissioning research), we track `node_history`:
 
-4. Add environment variables in Render dashboard:
-   - `OPENAI_API_KEY` (or ANTHROPIC/GOOGLE)
-   - `TAVILY_API_KEY`
-   - `LANGCHAIN_API_KEY` (optional)
+```python
+# Editor checks: "Did I just commission research?"
+if node_history[-2:] == ["editor", "researcher"]:
+    # Just got research back, pass to writer
+    return {"editor_decision": "pass_to_writer"}
+```
 
-5. Deploy
+This ensures the editor follows through on decisions.
 
-The `render.yaml` file configures:
-- Python 3.11 environment
-- Automatic dependency installation
-- Streamlit server on dynamic port
-- Environment variable management
+### Per-Agent Model Configuration
 
-## Monitoring with LangSmith
+**Model Registry** (`AVAILABLE_MODELS`):
+- Single source of truth for all providers
+- Display names, IDs, provider/model mappings
+- Cost annotations for informed selection
 
-LangSmith provides full visibility into agent interactions:
+**Runtime Model Selection:**
+- Each agent gets its own model config from state
+- No code changes needed to switch models
+- Optimize cost per agent role
 
-1. Set environment variables:
+## 📊 Monitoring with LangSmith
+
+LangSmith provides **full observability**:
+
+### What You Can See:
+- Complete conversation history per agent
+- Token usage breakdown (critical for cost optimization!)
+- Latency per node
+- Error traces with full context
+- State evolution through workflow
+- Model invocations with prompts/responses
+
+### Setup:
 ```bash
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=your_key_here
-LANGCHAIN_PROJECT=essay-writer
+export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_API_KEY=your_key
+export LANGCHAIN_PROJECT=essay-writer
 ```
 
-2. View traces at: https://smith.langchain.com/
+View traces at: https://smith.langchain.com/
 
-Traces include:
-- Full conversation history for each agent
-- Token usage per node
-- Latency metrics
-- Error tracking
-- State inspection at each step
+**Pro Tip:** Use LangSmith to identify which agents consume the most tokens, then optimize model selection!
 
-## Development
+## 🎓 Learning Resources
 
-### Adding New Agents
+### Concepts Demonstrated
 
-1. Define agent function in `graph/nodes.py`:
-```python
-def new_agent_node(state: EssayState) -> dict:
-    # Agent logic
-    return {"field": value}
+1. **Agentic Architecture**: Autonomous agents with decision-making capabilities
+2. **Graph-Based Workflows**: LangGraph for complex agent orchestration
+3. **Conditional Routing**: Dynamic workflow paths based on state
+4. **Iterative Refinement**: Feedback loops for quality improvement
+5. **State Management**: TypedDict schemas with reducer annotations
+6. **Multi-Provider Support**: Abstraction over LLM providers
+7. **Production Patterns**: Streaming, error handling, monitoring
+
+### Related Projects
+
+Explore other LLM projects in this repository:
+- `../agent/` - Basic ReAct agent implementations
+- `../rag/` - Retrieval-Augmented Generation examples
+- Other ZTM course projects
+
+## 🚀 Deployment
+
+### Render.com (Recommended)
+
+1. **Push to GitHub**
+2. **Connect to Render.com** - Auto-detects `render.yaml`
+3. **Add environment variables** in Render dashboard
+4. **Deploy** - Automatic builds on git push
+
+The `render.yaml` configures:
+- Python 3.11 runtime
+- Dependency installation
+- Streamlit server (auto port detection)
+- Environment variable injection
+
+### Local Production Mode
+
+```bash
+streamlit run app.py --server.port 8501 --server.headless true
 ```
 
-2. Add node to graph in `graph/workflow.py`:
-```python
-graph.add_node("new_agent", new_agent_node)
-graph.add_edge("previous_node", "new_agent")
-```
-
-3. Update state schema in `graph/state.py` if needed
-
-### Adding New LLM Providers
-
-1. Add provider configuration in `config/models.py`:
-```python
-MODEL_CONFIGS["new_provider"] = {
-    "models": ["model-1", "model-2"],
-    "default_index": 0
-}
-```
-
-2. Add provider case in `get_llm()` function
-3. Update `.env.example` with new API key
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-**"API key not found" error**
-- Ensure .env file exists and contains required keys
-- Check that .env is in the correct directory
-- Verify API keys are valid and active
+**"Researcher uses too many tokens"**
+- ✅ Use GPT-5 Nano or GPT-4o Mini for researcher
+- ✅ Research tasks process ~50K tokens per cycle
+- ✅ Cheap models save 10-20x costs here
 
-**"Tavily search failed" error**
-- Check TAVILY_API_KEY is set correctly
-- Verify internet connection
-- Check Tavily API status
-
-**Essay generation stops unexpectedly**
+**"Essay generation stops early"**
 - Check LangSmith traces for errors
-- Verify sufficient API credits/quota
-- Check for parsing errors in agent responses
+- Verify API rate limits/quotas
+- Increase iteration limits if needed
 
-**Streamlit not updating in real-time**
-- This is expected behavior - updates occur after each node completes
-- Not a true token-by-token stream, but node-by-node updates
+**"Status banners not updating"**
+- Updates occur after each node completes (by design)
+- Not token-by-token streaming, but node-by-node
 
-### Debug Mode
+**"API Key errors"**
+- Ensure `.env` file exists in project root
+- Verify API keys are active and have credits
+- Check key format matches provider requirements
 
-To see detailed logging, set environment variable:
-```bash
-LANGCHAIN_VERBOSE=true
-```
+## 🤝 Contributing
 
-## Contributing
+This project demonstrates agentic programming capabilities. Ideas for extension:
 
-Contributions welcome! Areas for improvement:
-- Token-by-token streaming instead of node-by-node
-- Additional agent types (fact-checker, citation formatter)
-- Support for different essay formats (MLA, APA, Chicago)
-- Multi-language support
-- PDF export with formatting
+- **Additional Agents**: Fact-checker, citation formatter, style editor
+- **Format Support**: MLA, APA, Chicago citation styles
+- **Export Options**: PDF with formatting, DOCX
+- **Language Support**: Multi-language essay generation
+- **Advanced Routing**: Confidence-based agent selection
+- **Human-in-the-Loop**: Approval gates for critical decisions
 
-## License
+## 📝 License
 
-MIT License - see LICENSE file for details
+MIT License - See LICENSE file
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
-Built with:
-- [LangGraph](https://github.com/langchain-ai/langgraph) for agent orchestration
-- [LangChain](https://github.com/langchain-ai/langchain) for LLM integration
-- [Tavily](https://tavily.com/) for web research
-- [Streamlit](https://streamlit.io/) for web interface
-- [LangSmith](https://smith.langchain.com/) for monitoring
+**Inspired by:** Zero To Mastery (ZTM) LLM & AI Course
 
-Based on the ReAct agent pattern from the LangGraph documentation.
+**Built with:**
+- [LangGraph](https://github.com/langchain-ai/langgraph) - Multi-agent orchestration
+- [LangChain](https://github.com/langchain-ai/langchain) - LLM integration framework
+- [Tavily](https://tavily.com/) - AI-optimized web research API
+- [Streamlit](https://streamlit.io/) - Rapid web app development
+- [LangSmith](https://smith.langchain.com/) - LLM observability platform
+
+**Special Thanks:** The LangChain community for excellent documentation and examples.
+
+---
+
+*Built to demonstrate advanced agentic programming capabilities and production-ready LLM application development.*
