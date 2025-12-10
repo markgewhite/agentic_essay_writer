@@ -35,11 +35,11 @@ def main():
         return
 
     # Configure models for each agent
-    # Tip: Use cheaper models (gpt-4o-mini) for researcher to reduce costs
-    editor_model = get_model_by_id("gpt-5.1"),  # Default (most intelligent)
-    researcher_model = get_model_by_id("gpt-5-nano"),  # Default (cheapest for summarization)
-    writer_model = get_model_by_id("gpt-5-mini"),  # Default (balance of intelligence and cost)
-    critic_model = get_model_by_id("claude-sonnet-4-5-latest"),  # Default (different perspective)
+    # Tip: Use cheaper models (gpt-5-nano) for researcher to reduce costs
+    editor_model = get_model_by_id("gpt-5.1")  # Default (most intelligent)
+    researcher_model = get_model_by_id("gpt-5-nano")  # Default (cheapest for summarization)
+    writer_model = get_model_by_id("gpt-5-mini")  # Default (balance of intelligence and cost)
+    critic_model = get_model_by_id("claude-sonnet-4-5-latest")  # Default (different perspective)
 
     # Initialize state using centralized helper function
     initial_state = create_initial_state(
