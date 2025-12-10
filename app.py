@@ -211,7 +211,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
     try:
         # Initialize all panels to idle state
-        outline_status.info("⏸️ Editor: Idle")
+        outline_status.info("⏸️ Editor: Creating outline ...")
         research_status.info("⏸️ Researcher: Idle")
         draft_status.info("⏸️ Writer: Idle")
         feedback_status.info("⏸️ Critic: Idle")
