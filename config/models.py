@@ -10,21 +10,45 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
-# Model configurations for each provider
-MODEL_CONFIGS = {
-    "openai": {
-        "models": ["gpt-4o", "gpt-4o-mini"],
-        "default_index": 0
-    },
-    "anthropic": {
-        "models": ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"],
-        "default_index": 0
-    },
-    "google": {
-        "models": ["gemini-1.5-pro", "gemini-1.5-flash"],
-        "default_index": 0
-    }
-}
+# Unified model registry for per-agent model selection
+# Each entry contains display name and provider/model mapping
+AVAILABLE_MODELS = [
+    # OpenAI Models
+    {"id": "gpt-5-nano", "display": "GPT-5 Nano (OpenAI)", "provider": "openai", "name": "gpt-5-nano"}, # $0.05/MTok
+    {"id": "gpt-4o-mini", "display": "GPT-4o Mini (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},# $0.15/MTok
+    {"id": "gpt-5-mini", "display": "GPT-5 Mini (OpenAI)", "provider": "openai", "name": "gpt-5-mini"},  # $0.25/MTok
+    {"id": "gpt-4o-mini", "display": "GPT-4o Mini (OpenAI)", "provider": "openai", "name": "gpt-4o-mini"},  # $0.15/MTok
+
+    # Anthropic Models
+    {"id": "claude-haiku-4.5", "display": "Claude 4.5 Haiku (Anthropic)", "provider": "anthropic", "name": "claude-4-5-haiku-latest"}, # $1.00/MTok
+    {"id": "claude-sonnet-4.5", "display": "Claude 4.5 Sonnet (Anthropic)", "provider": "anthropic", "name": "claude-4-5-sonnet-latest"}, # $3.00/MTok
+    {"id": "claude-opus-4.5", "display": "Claude 4.5 Opus (Anthropic)", "provider": "anthropic", "name": "claude-4-5-opus-latest"},  # $5.00/MTok
+
+    # Google Models
+    {"id": "gemini-flash-2.5-lite", "display": "Gemini 2.5 Flash Lite (Google)", "provider": "google", "name": "gemini-2.5-flash-lite"}, # $0.10/MTok
+    {"id": "gemini-flash-2.5", "display": "Gemini 2.5 Flash (Google)", "provider": "google", "name": "gemini-2.5-flash"}, # $0.30/MTok
+    {"id": "gemini-pro-2.5", "display": "Gemini 2.5 Pro (Google)", "provider": "google", "name": "gemini-2.5-pro"}, # $1.25/MTok
+]
+
+
+def get_model_by_id(model_id: str) -> dict:
+    """
+    Get model configuration by its ID.
+
+    Args:
+        model_id: The model ID (e.g., "gpt-4o-mini")
+
+    Returns:
+        Model config dict with provider and name
+
+    Raises:
+        ValueError: If model_id not found
+    """
+    for model in AVAILABLE_MODELS:
+        if model["id"] == model_id:
+            return {"provider": model["provider"], "name": model["name"]}
+
+    raise ValueError(f"Model ID '{model_id}' not found in AVAILABLE_MODELS")
 
 
 def get_llm(provider: str, model: str, temperature: float = 0.7):

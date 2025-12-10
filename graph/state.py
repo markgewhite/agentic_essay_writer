@@ -79,9 +79,11 @@ class EssayState(TypedDict):
     # Essay parameters
     max_essay_length: int                    # Target word count
 
-    # Model configuration
-    model_provider: Literal["openai", "anthropic", "google"]
-    model_name: str
+    # Model configuration (per-agent)
+    editor_model: dict                       # {"provider": "openai", "name": "gpt-4o"}
+    researcher_model: dict                   # {"provider": "openai", "name": "gpt-4o-mini"}
+    writer_model: dict                       # {"provider": "anthropic", "name": "claude-3-5-sonnet-latest"}
+    critic_model: dict                       # {"provider": "openai", "name": "gpt-4o"}
 
     # ============================================================================
     # ROUTING CONTROL
@@ -103,8 +105,10 @@ class EssayState(TypedDict):
 
 def create_initial_state(
     topic: str,
-    model_provider: Literal["openai", "anthropic", "google"],
-    model_name: str,
+    editor_model: dict,
+    researcher_model: dict,
+    writer_model: dict,
+    critic_model: dict,
     max_editing_iterations: int = 3,
     max_critique_iterations: int = 3,
     max_writing_iterations: int = 3,
@@ -118,8 +122,10 @@ def create_initial_state(
 
     Args:
         topic: The essay topic
-        model_provider: LLM provider to use
-        model_name: Specific model name
+        editor_model: Model config for editor agent {"provider": "openai", "name": "gpt-4o"}
+        researcher_model: Model config for researcher agent (recommend cheap model)
+        writer_model: Model config for writer agent
+        critic_model: Model config for critic agent
         max_editing_iterations: Max research/outline iterations (default: 3)
         max_critique_iterations: Max full critique cycles (default: 3)
         max_writing_iterations: Max revisions per critique cycle (default: 3)
@@ -148,8 +154,10 @@ def create_initial_state(
         "max_critique_iterations": max_critique_iterations,
         "max_writing_iterations": max_writing_iterations,
         "max_essay_length": max_essay_length,
-        "model_provider": model_provider,
-        "model_name": model_name,
+        "editor_model": editor_model,
+        "researcher_model": researcher_model,
+        "writer_model": writer_model,
+        "critic_model": critic_model,
         "node_history": [],
         "current_outline": "",
         "current_feedback": "",

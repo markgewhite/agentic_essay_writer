@@ -42,8 +42,8 @@ def editor_node(state: EssayState) -> dict:
     Returns:
         Dict with updated state fields depending on context
     """
-    # Get LLM
-    llm = get_llm(state["model_provider"], state["model_name"])
+    # Get LLM for editor
+    llm = get_llm(state["editor_model"]["provider"], state["editor_model"]["name"])
 
     # Check node history to determine context
     node_history = state.get("node_history", [])
@@ -197,8 +197,8 @@ def researcher_node(state: EssayState) -> dict:
     # Execute all research queries
     results = execute_research(state["research_queries"])
 
-    # Get LLM for summarization
-    llm = get_llm(state["model_provider"], state["model_name"])
+    # Get LLM for summarization (use researcher model)
+    llm = get_llm(state["researcher_model"]["provider"], state["researcher_model"]["name"])
 
     # Summarize each query's results using LLM
     for result in results:
@@ -276,8 +276,8 @@ def writer_node(state: EssayState) -> dict:
     Returns:
         Dict with updated: draft, writing_iteration, messages
     """
-    # Get LLM
-    llm = get_llm(state["model_provider"], state["model_name"])
+    # Get LLM for writer
+    llm = get_llm(state["writer_model"]["provider"], state["writer_model"]["name"])
 
     if state["writing_iteration"] == 0:
         # Initial draft generation
@@ -357,8 +357,8 @@ def critic_node(state: EssayState) -> dict:
     Returns:
         Dict with updated: feedback, writing_complete, current_feedback (for streaming), messages
     """
-    # Get LLM
-    llm = get_llm(state["model_provider"], state["model_name"])
+    # Get LLM for critic
+    llm = get_llm(state["critic_model"]["provider"], state["critic_model"]["name"])
 
     # Estimate current word count
     word_count = estimate_word_count(state["draft"])

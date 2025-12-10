@@ -8,6 +8,7 @@ Set breakpoints anywhere to inspect state and node outputs.
 from dotenv import load_dotenv
 from graph.workflow import create_essay_workflow
 from graph.state import create_initial_state
+from config.models import get_model_by_id
 
 # Load environment variables
 load_dotenv()
@@ -33,11 +34,20 @@ def main():
         print(f"✗ Error creating workflow: {e}")
         return
 
+    # Configure models for each agent
+    # Tip: Use cheaper models (gpt-4o-mini) for researcher to reduce costs
+    editor_model = get_model_by_id("gpt-4o")
+    researcher_model = get_model_by_id("gpt-4o-mini")  # Cheap model recommended
+    writer_model = get_model_by_id("gpt-4o")
+    critic_model = get_model_by_id("gpt-4o")
+
     # Initialize state using centralized helper function
     initial_state = create_initial_state(
         topic=test_topic,
-        model_provider="openai",  # Change to your preferred provider
-        model_name="gpt-4o-mini",  # Change to your preferred model
+        editor_model=editor_model,
+        researcher_model=researcher_model,
+        writer_model=writer_model,
+        critic_model=critic_model,
         max_editing_iterations=2,
         max_critique_iterations=2,
         max_writing_iterations=2,

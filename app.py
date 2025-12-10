@@ -8,7 +8,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from graph.workflow import create_essay_workflow
 from graph.state import create_initial_state
-from config.models import MODEL_CONFIGS
+from config.models import AVAILABLE_MODELS, get_model_by_id
 
 # Load environment variables
 load_dotenv()
@@ -42,18 +42,49 @@ with st.sidebar:
     st.header("⚙️ Configuration")
 
     st.subheader("Model Selection")
-    provider = st.selectbox(
-        "Model Provider",
-        options=list(MODEL_CONFIGS.keys()),
-        format_func=lambda x: x.capitalize(),
-        help="Choose the LLM provider (requires corresponding API key in .env)"
+    st.caption("Select different models for each agent to optimize cost and performance")
+
+    # Create list of display names and IDs for selectbox
+    model_options = [m["display"] for m in AVAILABLE_MODELS]
+    model_ids = [m["id"] for m in AVAILABLE_MODELS]
+
+    # Helper to get index by ID
+    def get_index_by_id(target_id):
+        try:
+            return model_ids.index(target_id)
+        except ValueError:
+            return 0  # Default to first model if not found
+
+    editor_model_id = st.selectbox(
+        "Editor Model",
+        options=model_ids,
+        format_func=lambda x: next(m["display"] for m in AVAILABLE_MODELS if m["id"] == x),
+        index=get_index_by_id("gpt-5.1"),  # Default (most intelligent)
+        help="Model for developing thesis, outline, and making strategic decisions"
     )
 
-    model = st.selectbox(
-        "Model",
-        options=MODEL_CONFIGS[provider]["models"],
-        index=MODEL_CONFIGS[provider]["default_index"],
-        help="Select the specific model to use"
+    researcher_model_id = st.selectbox(
+        "Researcher Model",
+        options=model_ids,
+        format_func=lambda x: next(m["display"] for m in AVAILABLE_MODELS if m["id"] == x),
+        index=get_index_by_id("gpt-5-nano"),  # Default (cheapest for summarization)
+        help="Model for summarizing research results (recommend cheap model - this agent uses many tokens)"
+    )
+
+    writer_model_id = st.selectbox(
+        "Writer Model",
+        options=model_ids,
+        format_func=lambda x: next(m["display"] for m in AVAILABLE_MODELS if m["id"] == x),
+        index=get_index_by_id("gpt-5-mini"),  # Default (balance of intelligence and cost)
+        help="Model for generating and revising essay drafts"
+    )
+
+    critic_model_id = st.selectbox(
+        "Critic Model",
+        options=model_ids,
+        format_func=lambda x: next(m["display"] for m in AVAILABLE_MODELS if m["id"] == x),
+        index=get_index_by_id("claude-sonnet-4-5-latest"),  # Default (different perspective)
+        help="Model for evaluating draft quality and providing feedback"
     )
 
     st.divider()
@@ -118,11 +149,19 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         st.error(f"Error creating workflow: {str(e)}")
         st.stop()
 
+    # Convert model IDs to model configs
+    editor_model = get_model_by_id(editor_model_id)
+    researcher_model = get_model_by_id(researcher_model_id)
+    writer_model = get_model_by_id(writer_model_id)
+    critic_model = get_model_by_id(critic_model_id)
+
     # Initialize state using centralized helper function
     initial_state = create_initial_state(
         topic=topic,
-        model_provider=provider,
-        model_name=model,
+        editor_model=editor_model,
+        researcher_model=researcher_model,
+        writer_model=writer_model,
+        critic_model=critic_model,
         max_editing_iterations=max_editing,
         max_critique_iterations=max_critique,
         max_writing_iterations=max_writing,
