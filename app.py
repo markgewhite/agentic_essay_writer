@@ -5,12 +5,7 @@ Provides configuration options and real-time streaming of agent progress.
 """
 
 import streamlit as st
-import asyncio
-import nest_asyncio
 from dotenv import load_dotenv
-
-# Allow nested event loops (needed for Streamlit + async)
-nest_asyncio.apply()
 from graph.workflow import create_essay_workflow
 from graph.state import create_initial_state
 from config.models import AVAILABLE_MODELS, get_model_by_id
@@ -224,99 +219,103 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         # Track the final draft as we stream
         final_draft = None
 
-        # Use astream_events with nest_asyncio for real-time streaming
-        async def stream_events():
-            async for event in workflow.astream_events(initial_state, version="v2"):
-                yield event
+        # Use workflow.stream() for reliable Streamlit compatibility
+        for event in workflow.stream(initial_state):
+            # event is a dict with node name as key
+            node_name = list(event.keys())[0]
+            node_output = event[node_name]
 
-        # Create event loop and iterate (nest_asyncio allows this in Streamlit)
-        loop = asyncio.get_event_loop()
-        async_gen = stream_events()
+            # ================================================================
+            # PREDICT NEXT AGENT (show "Working..." for what's coming)
+            # ================================================================
 
-        # Process events as they arrive
-        while True:
-            try:
-                event = loop.run_until_complete(async_gen.__anext__())
-            except StopAsyncIteration:
-                break
-
-            event_type = event.get("event")
-            metadata = event.get("metadata", {})
-            node_name = metadata.get("langgraph_node")
-
-            # Skip non-node events
-            if not node_name:
-                continue
-
-            # Handle node start events
-            if event_type == "on_chain_start":
-                if node_name == "editor":
-                    outline_status.info("🔄 Editor: Working...")
-                elif node_name == "researcher":
-                    research_status.info("🔍 Researcher: Gathering web research...")
-                elif node_name == "writer":
-                    draft_status.info("✍️ Writer: Generating draft...")
-                elif node_name == "critic":
-                    feedback_status.info("💭 Critic: Evaluating draft quality...")
-
-            # Handle node end events (get outputs)
-            elif event_type == "on_chain_end":
-                node_output = event.get("data", {}).get("output", {})
-
-                # ================================================================
-                # Panel 1: OUTLINE (Editor)
-                # ================================================================
-                if node_name == "editor":
-                    # Update outline display if available
-                    if "current_outline" in node_output and node_output["current_outline"]:
-                        with outline_display:
-                            st.markdown(node_output["current_outline"])
-
-                    # Show completion status
-                    if node_output.get("essay_complete"):
-                        outline_status.success("✅ Editor: Essay approved!")
-                    elif node_output.get("editing_complete") and node_output.get("draft", "") == "":
-                        outline_status.success("✅ Editor: Outline complete")
+            # After editor: predict based on routing logic
+            if node_name == "editor":
+                if node_output.get("essay_complete"):
+                    # Workflow complete
+                    pass
+                elif node_output.get("draft", "") == "":
+                    # Initial editing phase
+                    if node_output.get("editing_complete"):
+                        draft_status.info("✍️ Writer: Starting draft...")
                     else:
-                        outline_status.success("✅ Editor: Complete")
+                        research_status.info("🔍 Researcher: Starting research...")
+                else:
+                    # After critique review
+                    decision = node_output.get("editor_decision", "revise")
+                    if decision == "research":
+                        research_status.info("🔍 Researcher: Starting research...")
+                    else:
+                        draft_status.info("✍️ Writer: Starting revision...")
 
-                # ================================================================
-                # Panel 2: RESEARCH HIGHLIGHTS (Researcher)
-                # ================================================================
-                elif node_name == "researcher":
-                    # Display research highlights using the prepared highlights
-                    if "current_research_highlights" in node_output and node_output["current_research_highlights"]:
-                        with research_display:
-                            for i, highlight in enumerate(node_output["current_research_highlights"], 1):
-                                st.markdown(f"**Query {i}:** {highlight['query']}")
-                                st.text(highlight['preview'])
-                                st.markdown("---")
+            # After researcher: always goes to editor
+            elif node_name == "researcher":
+                outline_status.info("🔄 Editor: Reviewing research...")
 
-                        research_status.success(f"✅ Researcher: Complete ({len(node_output['current_research_highlights'])} results)")
+            # After writer: always goes to critic
+            elif node_name == "writer":
+                feedback_status.info("💭 Critic: Starting evaluation...")
 
-                # ================================================================
-                # Panel 3: DRAFT (Writer)
-                # ================================================================
-                elif node_name == "writer":
-                    # Update draft display if available
-                    if "current_draft" in node_output and node_output["current_draft"]:
-                        final_draft = node_output["current_draft"]
-                        with draft_display:
-                            st.markdown(node_output["current_draft"])
+            # After critic: always goes to editor
+            elif node_name == "critic":
+                outline_status.info("🔄 Editor: Reviewing critique...")
 
-                        draft_status.success("✅ Writer: Draft complete")
+            # ================================================================
+            # PROCESS CURRENT NODE OUTPUT
+            # ================================================================
 
-                # ================================================================
-                # Panel 4: CRITICAL FEEDBACK (Critic)
-                # ================================================================
-                elif node_name == "critic":
-                    # Update feedback display if available
-                    if "current_feedback" in node_output and node_output["current_feedback"]:
-                        with feedback_display:
-                            st.markdown(node_output["current_feedback"])
+            # Panel 1: OUTLINE (Editor)
+            if node_name == "editor":
+                # Update outline display if available
+                if "current_outline" in node_output and node_output["current_outline"]:
+                    with outline_display:
+                        st.markdown(node_output["current_outline"])
 
-                        # Mark complete
-                        feedback_status.success("✅ Critic: Evaluation complete")
+                # Show completion status
+                if node_output.get("essay_complete"):
+                    outline_status.success("✅ Editor: Essay approved!")
+                elif node_output.get("editing_complete") and node_output.get("draft", "") == "":
+                    outline_status.success("✅ Editor: Outline complete")
+                else:
+                    outline_status.success("✅ Editor: Complete")
+
+            # ================================================================
+            # Panel 2: RESEARCH HIGHLIGHTS (Researcher)
+            # ================================================================
+            elif node_name == "researcher":
+                # Display research highlights using the prepared highlights
+                if "current_research_highlights" in node_output and node_output["current_research_highlights"]:
+                    with research_display:
+                        for i, highlight in enumerate(node_output["current_research_highlights"], 1):
+                            st.markdown(f"**Query {i}:** {highlight['query']}")
+                            st.text(highlight['preview'])
+                            st.markdown("---")
+
+                    research_status.success(f"✅ Researcher: Complete ({len(node_output['current_research_highlights'])} results)")
+
+            # ================================================================
+            # Panel 3: DRAFT (Writer)
+            # ================================================================
+            elif node_name == "writer":
+                # Update draft display if available
+                if "current_draft" in node_output and node_output["current_draft"]:
+                    final_draft = node_output["current_draft"]
+                    with draft_display:
+                        st.markdown(node_output["current_draft"])
+
+                    draft_status.success("✅ Writer: Draft complete")
+
+            # ================================================================
+            # Panel 4: CRITICAL FEEDBACK (Critic)
+            # ================================================================
+            elif node_name == "critic":
+                # Update feedback display if available
+                if "current_feedback" in node_output and node_output["current_feedback"]:
+                    with feedback_display:
+                        st.markdown(node_output["current_feedback"])
+
+                    # Mark complete
+                    feedback_status.success("✅ Critic: Evaluation complete")
 
         # ====================================================================
         # DISPLAY FINAL ESSAY

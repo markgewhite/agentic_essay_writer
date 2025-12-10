@@ -18,7 +18,6 @@ streamlit==1.52.0
 # Utilities
 python-dotenv==1.0.1
 pydantic==2.10.3
-nest-asyncio==1.6.0
 
 # Monitoring
 langsmith==0.1.147
