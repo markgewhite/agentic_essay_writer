@@ -7,6 +7,7 @@ Provides configuration options and real-time streaming of agent progress.
 import streamlit as st
 from dotenv import load_dotenv
 from graph.workflow import create_essay_workflow
+from graph.state import create_initial_state
 from config.models import MODEL_CONFIGS
 
 # Load environment variables
@@ -117,34 +118,16 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         st.error(f"Error creating workflow: {str(e)}")
         st.stop()
 
-    # Initialize state
-    initial_state = {
-        "messages": [],
-        "topic": topic,
-        "thesis": "",
-        "outline": "",
-        "research_queries": [],
-        "research_results": [],
-        "editing_iteration": 0,
-        "editing_complete": False,
-        "draft": "",
-        "feedback": "",
-        "editor_direction": "",
-        "editor_decision": "",
-        "critique_iteration": 0,
-        "writing_iteration": 0,
-        "essay_complete": False,
-        "max_editing_iterations": max_editing,
-        "max_critique_iterations": max_critique,
-        "max_writing_iterations": max_writing,
-        "max_essay_length": max_length,
-        "model_provider": provider,
-        "model_name": model,
-        "current_outline": "",
-        "current_feedback": "",
-        "current_research_highlights": [],
-        "current_draft": ""
-    }
+    # Initialize state using centralized helper function
+    initial_state = create_initial_state(
+        topic=topic,
+        model_provider=provider,
+        model_name=model,
+        max_editing_iterations=max_editing,
+        max_critique_iterations=max_critique,
+        max_writing_iterations=max_writing,
+        max_essay_length=max_length
+    )
 
     # ========================================================================
     # CREATE UI CONTAINERS FOR REAL-TIME UPDATES - 2x2 GRID

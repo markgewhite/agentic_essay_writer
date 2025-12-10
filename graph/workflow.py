@@ -21,9 +21,10 @@ def route_after_editor(state: EssayState) -> Literal["researcher", "writer", "co
     """
     Routing logic after editor node executes.
 
-    The editor serves two roles:
+    The editor serves three roles:
     1. Initial editing: Requests research until outline is ready
     2. Critique review: Decides what to do after critic feedback
+    3. Post-research handoff: Passes commissioned research to writer
 
     Args:
         state: Current essay state
@@ -56,8 +57,10 @@ def route_after_editor(state: EssayState) -> Literal["researcher", "writer", "co
 
         if decision == "research":
             return "researcher"  # Commission more research
+        elif decision == "pass_to_writer":
+            return "writer"  # Just received research, pass to writer
         else:
-            return "writer"  # Revise with direction
+            return "writer"  # Revise with direction (approve becomes complete above)
 
 
 def create_essay_workflow():

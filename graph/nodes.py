@@ -19,16 +19,21 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 def editor_node(state: EssayState) -> dict:
     """
-    Editor agent performs two roles based on workflow context:
+    Editor agent performs three roles based on workflow context:
 
     1. Initial Editing (when draft is empty):
        - Develops thesis and outline
        - Requests research to support arguments
        - Refines based on research results
 
-    2. Critique Review (when draft exists with feedback):
+    2. Post-Research Handoff (after commissioning research during critique):
+       - Just received new research that was commissioned
+       - Pass directly to writer without making another decision
+       - Uses the direction already provided
+
+    3. Critique Review (when draft exists with feedback):
        - Reviews critic's feedback
-       - Decides: commission research, revise outline, or approve for revision
+       - Decides: commission research, revise outline, or approve
        - Provides direction to writer
 
     Args:
@@ -40,11 +45,43 @@ def editor_node(state: EssayState) -> dict:
     # Get LLM
     llm = get_llm(state["model_provider"], state["model_name"])
 
-    # Determine context: Are we in initial editing or reviewing a critique?
-    is_reviewing_critique = (state.get("draft", "") != "" and
-                            state.get("feedback", "") != "")
+    # Check node history to determine context
+    node_history = state.get("node_history", [])
 
-    if is_reviewing_critique:
+    # Check if we just returned from researcher (commissioned research in previous editor call)
+    # Pattern: [..., "editor", "researcher", "editor" (current)]
+    just_returned_from_research = (
+        len(node_history) >= 2 and
+        node_history[-1] == "researcher" and
+        node_history[-2] == "editor" and
+        state.get("draft", "") != ""  # Only applies when we have a draft
+    )
+
+    # Determine context: Are we in initial editing or reviewing a critique?
+    is_reviewing_critique = (
+        state.get("draft", "") != "" and
+        state.get("feedback", "") != "" and
+        not just_returned_from_research  # Don't review again if we just got research back
+    )
+
+    if just_returned_from_research:
+        # ====================================================================
+        # CONTEXT: Just received research commissioned during critique review
+        # ====================================================================
+        # We already made a decision and provided direction in the previous
+        # editor call. Now we just pass the new research to the writer.
+        # Don't make another approve/research/revise decision yet.
+
+        # Get current node history and append this visit
+        updated_history = state.get("node_history", []) + ["editor"]
+
+        return {
+            "editor_decision": "pass_to_writer",  # Signal to routing to go to writer
+            "writing_iteration": 0,  # Reset for new writing cycle with research
+            "node_history": updated_history
+        }
+
+    elif is_reviewing_critique:
         # ====================================================================
         # CONTEXT: Reviewing critic feedback on a draft
         # ====================================================================
@@ -74,6 +111,9 @@ def editor_node(state: EssayState) -> dict:
         # (The routing function will handle max iterations safety check)
         essay_complete = (parsed["editor_decision"] == "approve")
 
+        # Get current node history and append this visit
+        updated_history = state.get("node_history", []) + ["editor"]
+
         return {
             "thesis": parsed["thesis"],
             "outline": parsed["outline"],
@@ -83,7 +123,8 @@ def editor_node(state: EssayState) -> dict:
             "critique_iteration": new_critique_iteration,
             "essay_complete": essay_complete,
             "writing_iteration": 0,  # Reset writing iteration for new cycle
-            "current_outline": parsed["outline"]  # For streaming to UI
+            "current_outline": parsed["outline"],  # For streaming to UI
+            "node_history": updated_history
         }
 
     else:
@@ -124,13 +165,17 @@ def editor_node(state: EssayState) -> dict:
             len(parsed["new_queries"]) == 0
         )
 
+        # Get current node history and append this visit
+        updated_history = state.get("node_history", []) + ["editor"]
+
         return {
             "thesis": parsed["thesis"],
             "outline": parsed["outline"],
             "research_queries": parsed["new_queries"],
             "editing_iteration": new_iteration,
             "editing_complete": is_complete,
-            "current_outline": parsed["outline"]  # For streaming to UI
+            "current_outline": parsed["outline"],  # For streaming to UI
+            "node_history": updated_history
         }
 
 
@@ -206,10 +251,14 @@ def researcher_node(state: EssayState) -> dict:
             }
             highlights.append(preview)
 
+    # Get current node history and append this visit
+    updated_history = state.get("node_history", []) + ["researcher"]
+
     return {
         "research_results": all_results,
         "research_queries": [],  # Clear queries after execution
-        "current_research_highlights": highlights  # For streaming to UI
+        "current_research_highlights": highlights,  # For streaming to UI
+        "node_history": updated_history
     }
 
 
@@ -280,10 +329,14 @@ def writer_node(state: EssayState) -> dict:
     # Invoke LLM
     response = llm.invoke(messages)
 
+    # Get current node history and append this visit
+    updated_history = state.get("node_history", []) + ["writer"]
+
     return {
         "draft": response.content,
         "writing_iteration": state["writing_iteration"] + 1,
-        "current_draft": response.content  # For streaming to UI
+        "current_draft": response.content,  # For streaming to UI
+        "node_history": updated_history
     }
 
 
@@ -339,8 +392,12 @@ def critic_node(state: EssayState) -> dict:
         state["writing_iteration"] >= state["max_writing_iterations"]  # Hard limit
     )
 
+    # Get current node history and append this visit
+    updated_history = state.get("node_history", []) + ["critic"]
+
     return {
         "feedback": parsed["feedback"],
         "writing_complete": is_complete,
-        "current_feedback": parsed["feedback"]  # For streaming to UI
+        "current_feedback": parsed["feedback"],  # For streaming to UI
+        "node_history": updated_history
     }

@@ -84,6 +84,13 @@ class EssayState(TypedDict):
     model_name: str
 
     # ============================================================================
+    # ROUTING CONTROL
+    # ============================================================================
+
+    # Track node execution history for routing decisions
+    node_history: List[str]                  # History of nodes visited (for routing logic)
+
+    # ============================================================================
     # STREAMING FIELDS (for real-time UI updates)
     # ============================================================================
 
@@ -92,3 +99,60 @@ class EssayState(TypedDict):
     current_feedback: str                    # Updated by critic
     current_research_highlights: List[dict]  # Updated by researcher - preview of results
     current_draft: str                       # Updated by writer - current draft text
+
+
+def create_initial_state(
+    topic: str,
+    model_provider: Literal["openai", "anthropic", "google"],
+    model_name: str,
+    max_editing_iterations: int = 3,
+    max_critique_iterations: int = 3,
+    max_writing_iterations: int = 3,
+    max_essay_length: int = 2000
+) -> EssayState:
+    """
+    Create an initial EssayState with default values.
+
+    This centralizes state initialization to ensure consistency and
+    makes it easy to maintain when new fields are added.
+
+    Args:
+        topic: The essay topic
+        model_provider: LLM provider to use
+        model_name: Specific model name
+        max_editing_iterations: Max research/outline iterations (default: 3)
+        max_critique_iterations: Max full critique cycles (default: 3)
+        max_writing_iterations: Max revisions per critique cycle (default: 3)
+        max_essay_length: Target word count (default: 2000)
+
+    Returns:
+        A fully initialized EssayState ready for workflow execution
+    """
+    return {
+        "messages": [],
+        "topic": topic,
+        "thesis": "",
+        "outline": "",
+        "research_queries": [],
+        "research_results": [],
+        "editing_iteration": 0,
+        "editing_complete": False,
+        "draft": "",
+        "feedback": "",
+        "editor_direction": "",
+        "editor_decision": "",
+        "critique_iteration": 0,
+        "writing_iteration": 0,
+        "essay_complete": False,
+        "max_editing_iterations": max_editing_iterations,
+        "max_critique_iterations": max_critique_iterations,
+        "max_writing_iterations": max_writing_iterations,
+        "max_essay_length": max_essay_length,
+        "model_provider": model_provider,
+        "model_name": model_name,
+        "node_history": [],
+        "current_outline": "",
+        "current_feedback": "",
+        "current_research_highlights": [],
+        "current_draft": ""
+    }

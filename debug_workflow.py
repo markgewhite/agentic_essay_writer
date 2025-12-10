@@ -7,6 +7,7 @@ Set breakpoints anywhere to inspect state and node outputs.
 
 from dotenv import load_dotenv
 from graph.workflow import create_essay_workflow
+from graph.state import create_initial_state
 
 # Load environment variables
 load_dotenv()
@@ -32,34 +33,16 @@ def main():
         print(f"✗ Error creating workflow: {e}")
         return
 
-    # Initialize state
-    initial_state = {
-        "messages": [],
-        "topic": test_topic,
-        "thesis": "",
-        "outline": "",
-        "research_queries": [],
-        "research_results": [],
-        "editing_iteration": 0,
-        "editing_complete": False,
-        "draft": "",
-        "feedback": "",
-        "editor_direction": "",
-        "editor_decision": "",
-        "critique_iteration": 0,
-        "writing_iteration": 0,
-        "essay_complete": False,
-        "max_editing_iterations": 2,
-        "max_critique_iterations": 2,
-        "max_writing_iterations": 2,
-        "max_essay_length": 1500,
-        "model_provider": "openai",  # Change to your preferred provider
-        "model_name": "gpt-4o-mini",  # Change to your preferred model
-        "current_outline": "",
-        "current_feedback": "",
-        "current_research_highlights": [],
-        "current_draft": ""
-    }
+    # Initialize state using centralized helper function
+    initial_state = create_initial_state(
+        topic=test_topic,
+        model_provider="openai",  # Change to your preferred provider
+        model_name="gpt-4o-mini",  # Change to your preferred model
+        max_editing_iterations=2,
+        max_critique_iterations=2,
+        max_writing_iterations=2,
+        max_essay_length=1500
+    )
 
     print("Initial State:")
     print(f"  - Max editing iterations: {initial_state['max_editing_iterations']}")
