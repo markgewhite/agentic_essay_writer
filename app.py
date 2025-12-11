@@ -62,6 +62,7 @@ This AI-powered essay writer uses multiple specialized agents:
 - **Critic**: Evaluates quality and provides detailed feedback
 
 The editor orchestrates the entire process, iteratively refining the essay through multiple cycles until high quality is achieved.
+Progress is displayed below, showing the latest step only. Once complete, you can review any step.
 """)
 
 # ============================================================================
@@ -337,9 +338,6 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                             st.success(f"**{label}**")
                         else:
                             st.info(label)
-
-                    # Note to user
-                    st.info("ℹ️ Progress is reported during processing. Once complete, you can review any step of the process.", icon="ℹ️")
                 else:
                     st.info("No executions yet. Workflow starting...")
 
