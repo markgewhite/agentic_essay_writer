@@ -160,15 +160,31 @@ with st.sidebar:
     st.caption("Powered by LangGraph, Tavily & LangSmith")
 
 # ============================================================================
-# MAIN CONTENT
+# MAIN CONTENT: Topic Input (left) + Final Essay Placeholder (right)
 # ============================================================================
 
-topic = st.text_area(
-    "Essay Topic",
-    placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
-    height=120,
-    help="Provide a clear, specific topic for the essay"
-)
+# Create top row layout BEFORE button
+top_col1, top_col2 = st.columns([1, 2])
+
+with top_col1:
+    st.markdown("### 📝 Essay Topic")
+    topic = st.text_area(
+        "Essay Topic",
+        placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
+        height=200,
+        help="Provide a clear, specific topic for the essay",
+        label_visibility="collapsed"
+    )
+
+with top_col2:
+    st.markdown("### 📄 Final Essay")
+    final_essay_placeholder = st.empty()
+    # Initially show dark grey placeholder
+    with final_essay_placeholder.container():
+        st.markdown(
+            '<div style="background-color: #262730; padding: 20px; border-radius: 5px; color: #a0a0a0; text-align: center; border: 1px solid #404040; height: 150px; display: flex; align-items: center; justify-content: center;">Essay will appear here when complete...</div>',
+            unsafe_allow_html=True
+        )
 
 if st.button("Generate Essay", type="primary", disabled=not topic):
 
@@ -209,27 +225,8 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     st.session_state.selected_execution_id = -1
 
     # ========================================================================
-    # CREATE UI CONTAINERS FOR NEW TIMELINE LAYOUT
+    # CREATE UI CONTAINERS FOR TIMELINE LAYOUT
     # ========================================================================
-
-    # ========================================================================
-    # TOP ROW: Topic Input (left) + Final Essay (right, greyed initially)
-    # ========================================================================
-    top_col1, top_col2 = st.columns([1, 2])
-
-    with top_col1:
-        st.subheader("📝 Topic")
-        st.info(topic)
-
-    with top_col2:
-        st.subheader("📄 Final Essay")
-        final_essay_display = st.empty()
-        # Initially show greyed out placeholder
-        with final_essay_display.container():
-            st.markdown(
-                '<div style="background-color: #f0f0f0; padding: 20px; border-radius: 5px; color: #888; text-align: center;">Essay will appear here when complete...</div>',
-                unsafe_allow_html=True
-            )
 
     st.divider()
     st.header("🔄 Generation Progress")
@@ -387,7 +384,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         # UPDATE FINAL ESSAY DISPLAY WHEN COMPLETE
         # ====================================================================
         if essay_complete and final_draft:
-            with final_essay_display.container():
+            with final_essay_placeholder.container():
                 st.success("✅ Essay Complete!")
 
                 # Metadata expander
@@ -400,8 +397,16 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
                     st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
 
-                # Display the essay
-                st.markdown(final_draft)
+                # Display the essay with dark grey background
+                # Use a container with custom styling
+                essay_container = st.container()
+                with essay_container:
+                    st.markdown(
+                        '<div style="background-color: #262730; padding: 20px; border-radius: 5px; border: 1px solid #404040;">',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(final_draft)
+                    st.markdown('</div>', unsafe_allow_html=True)
 
                 # Download button
                 st.download_button(
@@ -410,8 +415,8 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
                     mime="text/plain"
                 )
-            else:
-                st.warning("Draft not available in final output. This may indicate an error in the workflow.")
+        else:
+            st.warning("Draft not available in final output. This may indicate an error in the workflow.")
 
     except Exception as e:
         st.error(f"❌ Error during generation: {str(e)}")
