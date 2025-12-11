@@ -183,8 +183,8 @@ with st.sidebar:
 # MAIN CONTENT: Topic Input (left) + Final Essay Placeholder (right)
 # ============================================================================
 
-# Create top row layout BEFORE button
-top_col1, top_col2 = st.columns([1, 2])
+# Create top row layout with button in left column
+top_col1, top_col2 = st.columns([1, 3])
 
 with top_col1:
     st.markdown("### 📝 Essay Topic")
@@ -192,20 +192,45 @@ with top_col1:
         "Essay Topic",
         placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
         help="Provide a clear, specific topic for the essay",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        height=380
     )
+
+    # Generate button below topic input, full width
+    generate_clicked = st.button("Generate Essay", type="primary", disabled=not topic, use_container_width=True)
 
 with top_col2:
     st.markdown("### 📄 Final Essay")
     final_essay_placeholder = st.empty()
-    # Initially show dark grey placeholder
+    # Initially show full structure with placeholders (prevents layout shift)
     with final_essay_placeholder.container():
+        # Banner placeholder
+        st.info("⏳ Awaiting workflow completion...")
+
+        # Essay text area placeholder (fixed height, scrollable)
         st.markdown(
-            '<div style="background-color: #262730; padding: 20px; border-radius: 5px; color: #a0a0a0; text-align: center; border: 1px solid #404040; height: 150px; display: flex; align-items: center; justify-content: center;">Essay will appear here when complete...</div>',
+            '<div style="background-color: #262730; padding: 20px; border-radius: 5px; color: #a0a0a0; text-align: center; border: 1px solid #404040; height: 308px; padding: 20px; overflow-y: auto; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">Essay will appear here when complete...</div>',
             unsafe_allow_html=True
         )
 
-if st.button("Generate Essay", type="primary", disabled=not topic):
+        # Metadata and download button row below essay (initially disabled/empty)
+        meta_col1, meta_col2 = st.columns([3, 1])
+
+        with meta_col1:
+            with st.expander("📊 Generation Metadata", expanded=False):
+                st.caption("Metadata will appear here after generation completes.")
+
+        with meta_col2:
+            st.download_button(
+                label="📥 Download",
+                data="",
+                file_name="essay.txt",
+                mime="text/plain",
+                use_container_width=True,
+                disabled=True
+            )
+
+if generate_clicked:
 
     # Create workflow
     try:
@@ -454,7 +479,13 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     st.warning("⚠️ Essay Generated (not formally approved)")
                     st.caption("Workflow ended before formal approval, but a draft is available.")
 
-                # Top row: Metadata expander (left) + Download button (right)
+                # Display the essay with dark grey background (fixed height, scrollable)
+                st.markdown(
+                    f'<div style="background-color: #262730; color: white; padding: 20px; border-radius: 5px; border: 1px solid #404040; height: 308px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 1rem;">{final_draft}</div>',
+                    unsafe_allow_html=True
+                )
+
+                # Metadata and download button row below essay
                 meta_col1, meta_col2 = st.columns([3, 1])
 
                 with meta_col1:
@@ -477,14 +508,6 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                         mime="text/plain",
                         use_container_width=True
                     )
-
-                # Display the essay with dark grey background
-                st.markdown(
-                    '<div style="background-color: #262730; padding: 20px; border-radius: 5px; border: 1px solid #404040;">',
-                    unsafe_allow_html=True
-                )
-                st.markdown(final_draft)
-                st.markdown('</div>', unsafe_allow_html=True)
         else:
             with final_essay_placeholder.container():
                 st.warning("Draft not found. Please check the execution history for the latest writer output.")
