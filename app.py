@@ -171,7 +171,6 @@ with top_col1:
     topic = st.text_area(
         "Essay Topic",
         placeholder="Enter your essay topic or prompt here...\n\nExample: 'Analyze the impact of artificial intelligence on modern education systems'",
-        height=200,
         help="Provide a clear, specific topic for the essay",
         label_visibility="collapsed"
     )
@@ -231,6 +230,10 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     st.divider()
     st.header("🔄 Generation Progress")
 
+    # Status indicator for current activity
+    current_status = st.empty()
+    current_status.info("🚀 Starting workflow...")
+
     # ========================================================================
     # MAIN CONTENT: Timeline (left) + Details (right)
     # ========================================================================
@@ -282,10 +285,26 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             node_name = list(event.keys())[0]
             node_output = event[node_name]
 
+            # Update status to show which agent just completed
+            agent_name_display = {
+                "editor": "Editor",
+                "researcher": "Researcher",
+                "writer": "Writer",
+                "critic": "Critic"
+            }
+            icon = agent_icons.get(node_name, "⚙️")
+            current_status.success(f"{icon} {agent_name_display.get(node_name, node_name)} completed")
+
             # ================================================================
             # CAPTURE EXECUTION DATA FROM UI FIELDS
             # ================================================================
-            if "_ui_prompt" in node_output and "_ui_response" in node_output:
+            # Debug output to console
+            ui_prompt = node_output.get("_ui_prompt", "")
+            ui_response = node_output.get("_ui_response", "")
+            print(f"DEBUG {node_name}: prompt_len={len(ui_prompt)}, response_len={len(ui_response)}")
+
+            # Only capture if fields have actual values (not empty strings)
+            if ui_prompt and ui_response:
                 execution_id = len(st.session_state.current_execution_history)
                 iteration_num = count_agent_executions(
                     st.session_state.current_execution_history,
@@ -296,40 +315,29 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     execution_id=execution_id,
                     agent=node_name,
                     iteration_num=iteration_num,
-                    user_prompt=node_output["_ui_prompt"],
-                    response=node_output["_ui_response"]
+                    user_prompt=ui_prompt,
+                    response=ui_response
                 )
 
                 st.session_state.current_execution_history.append(entry)
                 st.session_state.selected_execution_id = execution_id  # Auto-select latest
+                print(f"✓ Captured execution {execution_id} for {node_name}")
+            else:
+                print(f"✗ Skipped {node_name} (no LLM call or empty fields)")
 
             # ================================================================
-            # RENDER TIMELINE
+            # RENDER TIMELINE (display-only for now)
             # ================================================================
             with timeline_container.container():
                 if st.session_state.current_execution_history:
-                    # Create radio options from execution history
-                    timeline_options = [
-                        f"{agent_icons.get(entry['agent'], '⚙️')} {entry['iteration_context']} - {entry['status'].upper()}"
-                        for entry in st.session_state.current_execution_history
-                    ]
-
-                    # Find index of selected item (default to latest)
-                    selected_index = st.session_state.selected_execution_id
-                    if selected_index >= len(timeline_options):
-                        selected_index = len(timeline_options) - 1
-
-                    # Render timeline with radio buttons
-                    selected_label = st.radio(
-                        "Select execution to view details:",
-                        options=timeline_options,
-                        index=selected_index,
-                        label_visibility="collapsed",
-                        key=f"timeline_radio_{len(st.session_state.current_execution_history)}"
-                    )
-
-                    # Update selected ID based on radio selection
-                    st.session_state.selected_execution_id = timeline_options.index(selected_label)
+                    # Display timeline as a list (non-interactive)
+                    for entry in st.session_state.current_execution_history:
+                        icon = agent_icons.get(entry['agent'], '⚙️')
+                        # Highlight the selected/latest entry
+                        if entry['id'] == st.session_state.selected_execution_id:
+                            st.success(f"**{icon} {entry['iteration_context']} - {entry['status'].upper()}**")
+                        else:
+                            st.info(f"{icon} {entry['iteration_context']} - {entry['status'].upper()}")
                 else:
                     st.info("No executions yet. Workflow starting...")
 
@@ -379,6 +387,29 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
             if node_name == "editor" and node_output.get("essay_complete"):
                 essay_complete = True
+                current_status.success("✅ Essay approved! Workflow complete.")
+            else:
+                # Predict next agent and update status
+                if node_name == "editor":
+                    if node_output.get("draft", "") == "":
+                        # Initial editing phase
+                        if node_output.get("editing_complete"):
+                            current_status.info("✍️ Writer starting draft...")
+                        else:
+                            current_status.info("🔍 Researcher gathering information...")
+                    else:
+                        # After critique review
+                        decision = node_output.get("editor_decision", "revise")
+                        if decision == "research":
+                            current_status.info("🔍 Researcher gathering additional information...")
+                        else:
+                            current_status.info("✍️ Writer revising draft...")
+                elif node_name == "researcher":
+                    current_status.info("✏️ Editor reviewing research...")
+                elif node_name == "writer":
+                    current_status.info("💭 Critic evaluating draft...")
+                elif node_name == "critic":
+                    current_status.info("✏️ Editor reviewing feedback...")
 
         # ====================================================================
         # UPDATE FINAL ESSAY DISPLAY WHEN COMPLETE

@@ -78,7 +78,10 @@ def editor_node(state: EssayState) -> dict:
         return {
             "editor_decision": "pass_to_writer",  # Signal to routing to go to writer
             "writing_iteration": 0,  # Reset for new writing cycle with research
-            "node_history": updated_history
+            "node_history": updated_history,
+            # Clear UI fields since no LLM call was made
+            "_ui_prompt": "",
+            "_ui_response": ""
         }
 
     elif is_reviewing_critique:
