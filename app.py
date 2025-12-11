@@ -415,56 +415,58 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     current_status.info("✏️ Editor reviewing feedback...")
 
         # ====================================================================
-        # UPDATE FINAL ESSAY DISPLAY WHEN COMPLETE
+        # DISPLAY FINAL ESSAY (regardless of approval status)
         # ====================================================================
-        if essay_complete:
-            # Get the latest draft from session state or track it
-            # The final draft should be the last one written
-            if not final_draft and st.session_state.current_execution_history:
-                # Find the most recent writer execution
-                for entry in reversed(st.session_state.current_execution_history):
-                    if entry['agent'] == 'writer':
-                        final_draft = entry['model_output']
-                        break
+        # Get the latest draft if not already tracked
+        if not final_draft and st.session_state.current_execution_history:
+            for entry in reversed(st.session_state.current_execution_history):
+                if entry['agent'] == 'writer':
+                    final_draft = entry['model_output']
+                    break
 
-            if final_draft:
-                with final_essay_placeholder.container():
+        if final_draft:
+            with final_essay_placeholder.container():
+                # Show different header based on approval status
+                if essay_complete:
                     st.success("✅ Essay Complete!")
+                else:
+                    st.warning("⚠️ Essay Generated (not formally approved)")
+                    st.caption("Workflow ended before formal approval, but a draft is available.")
 
-                    # Top row: Metadata expander (left) + Download button (right)
-                    meta_col1, meta_col2 = st.columns([3, 1])
+                # Top row: Metadata expander (left) + Download button (right)
+                meta_col1, meta_col2 = st.columns([3, 1])
 
-                    with meta_col1:
-                        # Metadata expander
-                        with st.expander("📊 Generation Metadata", expanded=False):
-                            st.write(f"**Topic:** {topic}")
-                            st.write(f"**Target Length:** {max_length} words")
-                            st.write("**Models Used:**")
-                            st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
-                            st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
-                            st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
-                            st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
+                with meta_col1:
+                    # Metadata expander
+                    with st.expander("📊 Generation Metadata", expanded=False):
+                        st.write(f"**Topic:** {topic}")
+                        st.write(f"**Target Length:** {max_length} words")
+                        st.write("**Models Used:**")
+                        st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
+                        st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
+                        st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
+                        st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
 
-                    with meta_col2:
-                        # Download button
-                        st.download_button(
-                            label="📥 Download",
-                            data=final_draft,
-                            file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
-
-                    # Display the essay with dark grey background
-                    st.markdown(
-                        '<div style="background-color: #262730; padding: 20px; border-radius: 5px; border: 1px solid #404040;">',
-                        unsafe_allow_html=True
+                with meta_col2:
+                    # Download button
+                    st.download_button(
+                        label="📥 Download",
+                        data=final_draft,
+                        file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
+                        mime="text/plain",
+                        use_container_width=True
                     )
-                    st.markdown(final_draft)
-                    st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                with final_essay_placeholder.container():
-                    st.warning("Essay approved but draft not found. Please check the execution history for the latest writer output.")
+
+                # Display the essay with dark grey background
+                st.markdown(
+                    '<div style="background-color: #262730; padding: 20px; border-radius: 5px; border: 1px solid #404040;">',
+                    unsafe_allow_html=True
+                )
+                st.markdown(final_draft)
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            with final_essay_placeholder.container():
+                st.warning("Draft not found. Please check the execution history for the latest writer output.")
 
         # Mark workflow as complete
         st.session_state.workflow_in_progress = False
