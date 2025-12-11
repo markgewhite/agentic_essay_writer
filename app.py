@@ -348,31 +348,41 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             # RENDER DETAIL PANELS BASED ON SELECTION
             # ================================================================
             if st.session_state.selected_execution_id >= 0 and st.session_state.current_execution_history:
-                selected_entry = st.session_state.current_execution_history[st.session_state.selected_execution_id]
+                # Find entry by ID, not by index (safer)
+                selected_entry = next(
+                    (entry for entry in st.session_state.current_execution_history
+                     if entry['id'] == st.session_state.selected_execution_id),
+                    None
+                )
 
-                # Status panel
-                with status_display.container():
-                    timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
-                    st.info(
-                        f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
-                        f"{selected_entry['iteration_context']} | "
-                        f"Status: {selected_entry['status'].upper()} | "
-                        f"Time: {timestamp_formatted}"
-                    )
+                if not selected_entry:
+                    # Fallback to last entry if ID not found
+                    selected_entry = st.session_state.current_execution_history[-1] if st.session_state.current_execution_history else None
 
-                # Input panel
-                with input_display.container():
-                    st.markdown(
-                        f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
-                        unsafe_allow_html=True
-                    )
+                if selected_entry:
+                    # Status panel
+                    with status_display.container():
+                        timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
+                        st.info(
+                            f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
+                            f"{selected_entry['iteration_context']} | "
+                            f"Status: {selected_entry['status'].upper()} | "
+                            f"Time: {timestamp_formatted}"
+                        )
 
-                # Output panel
-                with output_display.container():
-                    st.markdown(
-                        f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
-                        unsafe_allow_html=True
-                    )
+                    # Input panel
+                    with input_display.container():
+                        st.markdown(
+                            f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
+                            unsafe_allow_html=True
+                        )
+
+                    # Output panel
+                    with output_display.container():
+                        st.markdown(
+                            f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
+                            unsafe_allow_html=True
+                        )
 
             # ================================================================
             # TRACK FINAL DRAFT AND ESSAY COMPLETION
@@ -499,31 +509,41 @@ if "current_execution_history" in st.session_state and st.session_state.current_
     # Detail panels
     with view_col2:
         if st.session_state.selected_execution_id >= 0:
-            selected_entry = st.session_state.current_execution_history[st.session_state.selected_execution_id]
-
-            # Status
-            st.subheader("📊 Status")
-            timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
-            st.info(
-                f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
-                f"{selected_entry['iteration_context']} | "
-                f"Status: {selected_entry['status'].upper()} | "
-                f"Time: {timestamp_formatted}"
+            # Find entry by ID, not by index (safer)
+            selected_entry = next(
+                (entry for entry in st.session_state.current_execution_history
+                 if entry['id'] == st.session_state.selected_execution_id),
+                None
             )
 
-            # Input
-            st.subheader("📥 Model Input")
-            st.markdown(
-                f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
-                unsafe_allow_html=True
-            )
+            if not selected_entry and st.session_state.current_execution_history:
+                # Fallback to last entry if ID not found
+                selected_entry = st.session_state.current_execution_history[-1]
 
-            # Output
-            st.subheader("📤 Model Output")
-            st.markdown(
-                f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
-                unsafe_allow_html=True
-            )
+            if selected_entry:
+                # Status
+                st.subheader("📊 Status")
+                timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
+                st.info(
+                    f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
+                    f"{selected_entry['iteration_context']} | "
+                    f"Status: {selected_entry['status'].upper()} | "
+                    f"Time: {timestamp_formatted}"
+                )
+
+                # Input
+                st.subheader("📥 Model Input")
+                st.markdown(
+                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
+                    unsafe_allow_html=True
+                )
+
+                # Output
+                st.subheader("📤 Model Output")
+                st.markdown(
+                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
+                    unsafe_allow_html=True
+                )
 
 # ============================================================================
 # FOOTER
