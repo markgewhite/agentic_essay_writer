@@ -96,7 +96,8 @@ def editor_node(state: EssayState) -> dict:
             draft=state['draft'],
             feedback=state['feedback'],
             critique_iteration=state['critique_iteration'] + 1,
-            max_critique_iterations=state['max_critique_iterations']
+            max_critique_iterations=state['max_critique_iterations'],
+            max_queries=state['max_queries']
         )
 
         messages = [
@@ -150,7 +151,8 @@ def editor_node(state: EssayState) -> dict:
             topic=state['topic'],
             iteration=state['editing_iteration'] + 1,
             max_iterations=state['max_editing_iterations'],
-            research_context=research_context
+            research_context=research_context,
+            max_queries=state['max_queries']
         )
 
         messages = [
@@ -203,8 +205,11 @@ def researcher_node(state: EssayState) -> dict:
     Returns:
         Dict with updated: research_results, research_queries (cleared)
     """
-    # Execute all research queries
-    results = execute_research(state["research_queries"])
+    # Execute all research queries with configured max results
+    results = execute_research(
+        state["research_queries"],
+        max_results=state["max_results_per_query"]
+    )
 
     # Get LLM for summarization (use researcher model)
     llm = get_llm(state["researcher_model"]["provider"], state["researcher_model"]["name"])

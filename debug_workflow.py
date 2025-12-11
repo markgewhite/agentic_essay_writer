@@ -51,7 +51,9 @@ def main():
         max_editing_iterations=2,
         max_critique_iterations=2,
         max_writing_iterations=2,
-        max_essay_length=1500
+        max_essay_length=1500,
+        max_queries=3,
+        max_results_per_query=3
     )
 
     print("Initial State:")

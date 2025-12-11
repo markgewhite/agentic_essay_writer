@@ -81,6 +81,7 @@ TASK: Analyze the topic and identify what research is needed to develop a strong
 
 Please develop an initial thesis and outline.
 Formulate specific research queries to gather evidence for your arguments.
+You may request up to {max_queries} queries per iteration.
 """,
 
     "subsequent": """Topic: {topic}
@@ -90,18 +91,19 @@ CURRENT ITERATION: {iteration}/{max_iterations}
 RESEARCH CONTEXT:
 {research_context}
 
-TASK: Review the research results carefully and revise your thesis, outline and main points accordingly. 
- 
+TASK: Review the research results carefully and revise your thesis, outline and main points accordingly.
+
 Note that often the initial thesis is wrong because preconceptions are not supported by the evidence.
-When you change your thesis, you must revise your main points accordingly 
+When you change your thesis, you must revise your main points accordingly
 and consider whether the structure is still correct. If not, please revise it.
 
 Formulate additional research queries based on the findings so far.
 Identify what you need to know more about - those areas that need more depth.
 Identify what you still don't know. Having gathered information it may become more apparent what you don't know.
+You may request up to {max_queries} queries per iteration.
 
 If you are finding that the research is not providing any significant new evidence or arguments,
-then consider whether you need to ask different questions. 
+then consider whether you need to ask different questions.
 
 If you have gone through several iterations and have asked all the questions needed and you are not getting
 any new meaningful insights and evidence, then you may proceed to writing and set READY_TO_WRITE to Yes.
@@ -126,7 +128,7 @@ TASK: Review the critic's feedback on the essay draft and decide on the best cou
 
 As the editor, you have three options:
 
-1. COMMISSION MORE RESEARCH: If the critic identifies gaps in evidence, missing arguments, or areas needing more depth that require additional research, formulate new research queries to address these gaps.
+1. COMMISSION MORE RESEARCH: If the critic identifies gaps in evidence, missing arguments, or areas needing more depth that require additional research, formulate new research queries to address these gaps. You may request up to {max_queries} queries.
 
 2. REVISE OUTLINE AND PROVIDE DIRECTION: If the critic's feedback suggests the outline needs adjustment (structure issues, missing sections, argument flow), revise the outline and provide clear direction to the writer on how to revise the draft.
 

@@ -158,6 +158,25 @@ with st.sidebar:
     )
 
     st.divider()
+
+    st.subheader("Research Parameters")
+    max_queries = st.slider(
+        "Max Queries per Research Request",
+        min_value=2,
+        max_value=8,
+        value=3,
+        help="Maximum number of research queries the editor can request at once"
+    )
+
+    max_results_per_query = st.slider(
+        "Max Results per Query",
+        min_value=1,
+        max_value=5,
+        value=3,
+        help="Number of search results to retrieve for each research query"
+    )
+
+    st.divider()
     st.caption("Powered by LangGraph, Tavily & LangSmith")
 
 # ============================================================================
@@ -211,7 +230,9 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         max_editing_iterations=max_editing,
         max_critique_iterations=max_critique,
         max_writing_iterations=max_writing,
-        max_essay_length=max_length
+        max_essay_length=max_length,
+        max_queries=max_queries,
+        max_results_per_query=max_results_per_query
     )
 
     # Initialize session state for UI tracking

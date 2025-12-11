@@ -10,15 +10,18 @@ from datetime import datetime
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 
-def create_tavily_tool():
+def create_tavily_tool(max_results: int = 3):
     """
     Create Tavily search tool with appropriate configuration.
 
+    Args:
+        max_results: Number of results to retrieve per query (default: 3)
+
     Configuration:
-    - max_results: 3 results per query (balanced quality vs. volume)
+    - max_results: Configurable results per query (balanced quality vs. volume)
     - search_depth: "advanced" for higher quality, more relevant results
     - include_answer: True to get AI-generated summary
-    - include_raw_content: False to reduce noise
+    - include_raw_content: True to get full content for in-depth research
     - include_images: False (not needed for text essays)
 
     Returns:
@@ -28,7 +31,7 @@ def create_tavily_tool():
         ValueError: If TAVILY_API_KEY not found in environment
 
     Example:
-        >>> tool = create_tavily_tool()
+        >>> tool = create_tavily_tool(max_results=5)
         >>> results = tool.invoke({"query": "impact of AI on education"})
     """
     api_key = os.getenv("TAVILY_API_KEY")
@@ -39,7 +42,7 @@ def create_tavily_tool():
         )
 
     return TavilySearchResults(
-        max_results=8,              # Top 8 results per query for comprehensive coverage
+        max_results=max_results,    # Configurable results per query
         search_depth="advanced",    # Deep search for quality
         include_answer=True,        # Get AI-generated answer
         include_raw_content=True,   # Get full content for in-depth research
@@ -168,7 +171,7 @@ def summarize_research(results: List[Dict]) -> str:
     return summary
 
 
-def execute_research(queries: List[str]) -> List[Dict]:
+def execute_research(queries: List[str], max_results: int = 3) -> List[Dict]:
     """
     Execute multiple research queries using Tavily.
 
@@ -177,6 +180,7 @@ def execute_research(queries: List[str]) -> List[Dict]:
 
     Args:
         queries: List of search query strings
+        max_results: Number of results to retrieve per query (default: 3)
 
     Returns:
         List of research result dictionaries with structure:
@@ -187,9 +191,9 @@ def execute_research(queries: List[str]) -> List[Dict]:
 
     Example:
         >>> queries = ["AI in education", "machine learning applications"]
-        >>> results = execute_research(queries)
+        >>> results = execute_research(queries, max_results=5)
     """
-    search_tool = create_tavily_tool()
+    search_tool = create_tavily_tool(max_results=max_results)
     results = []
 
     for query in queries:

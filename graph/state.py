@@ -79,6 +79,10 @@ class EssayState(TypedDict):
     # Essay parameters
     max_essay_length: int                    # Target word count
 
+    # Research parameters
+    max_queries: int                         # Max queries per research request
+    max_results_per_query: int               # Max results to retrieve per query
+
     # Model configuration (per-agent)
     editor_model: dict                       # {"provider": "openai", "name": "gpt-4o"}
     researcher_model: dict                   # {"provider": "openai", "name": "gpt-4o-mini"}
@@ -121,7 +125,9 @@ def create_initial_state(
     max_editing_iterations: int = 3,
     max_critique_iterations: int = 3,
     max_writing_iterations: int = 3,
-    max_essay_length: int = 2000
+    max_essay_length: int = 2000,
+    max_queries: int = 3,
+    max_results_per_query: int = 3
 ) -> EssayState:
     """
     Create an initial EssayState with default values.
@@ -139,6 +145,8 @@ def create_initial_state(
         max_critique_iterations: Max full critique cycles (default: 3)
         max_writing_iterations: Max revisions per critique cycle (default: 3)
         max_essay_length: Target word count (default: 2000)
+        max_queries: Max queries per research request (default: 3)
+        max_results_per_query: Max results to retrieve per query (default: 3)
 
     Returns:
         A fully initialized EssayState ready for workflow execution
@@ -163,6 +171,8 @@ def create_initial_state(
         "max_critique_iterations": max_critique_iterations,
         "max_writing_iterations": max_writing_iterations,
         "max_essay_length": max_essay_length,
+        "max_queries": max_queries,
+        "max_results_per_query": max_results_per_query,
         "editor_model": editor_model,
         "researcher_model": researcher_model,
         "writer_model": writer_model,
