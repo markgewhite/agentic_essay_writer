@@ -222,6 +222,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     # Reset execution history for new generation
     st.session_state.current_execution_history = []
     st.session_state.selected_execution_id = -1
+    st.session_state.workflow_in_progress = True  # Flag to prevent duplicate rendering
 
     # ========================================================================
     # CREATE UI CONTAINERS FOR TIMELINE LAYOUT
@@ -321,26 +322,24 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 st.session_state.selected_execution_id = execution_id  # Auto-select latest
 
             # ================================================================
-            # RENDER TIMELINE (clickable buttons)
+            # RENDER TIMELINE (display-only during workflow to avoid GeneratorExit)
             # ================================================================
             with timeline_container.container():
                 if st.session_state.current_execution_history:
-                    # Display timeline with clickable buttons
+                    # Display-only timeline during execution
+                    # (Interactive buttons would interrupt the stream)
                     for entry in st.session_state.current_execution_history:
                         icon = agent_icons.get(entry['agent'], '⚙️')
-                        label = f"{icon} {entry['iteration_context']} - {entry['status'].upper()}"
+                        label = f"{icon} {entry['iteration_context']}"
 
-                        # Use columns to create button with colored background
-                        col = st.columns(1)[0]
-                        with col:
-                            # Highlight the selected/latest entry
-                            if entry['id'] == st.session_state.selected_execution_id:
-                                st.success(f"**{label}**")
-                            else:
-                                # Create clickable button
-                                if st.button(label, key=f"timeline_btn_{entry['id']}", use_container_width=True):
-                                    st.session_state.selected_execution_id = entry['id']
-                                    st.rerun()
+                        # Highlight the selected/latest entry
+                        if entry['id'] == st.session_state.selected_execution_id:
+                            st.success(f"**{label}**")
+                        else:
+                            st.info(label)
+
+                    # Note to user
+                    st.info("ℹ️ Progress is reported during processing. Once complete, you can review any step of the process.", icon="ℹ️")
                 else:
                     st.info("No executions yet. Workflow starting...")
 
@@ -468,16 +467,23 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                 with final_essay_placeholder.container():
                     st.warning("Essay approved but draft not found. Please check the execution history for the latest writer output.")
 
+        # Mark workflow as complete
+        st.session_state.workflow_in_progress = False
+
     except Exception as e:
         st.error(f"❌ Error during generation: {str(e)}")
         st.exception(e)
+        # Mark workflow as complete (even on error)
+        st.session_state.workflow_in_progress = False
 
 # ============================================================================
 # PERSISTENT TIMELINE VIEW (after workflow completes)
 # ============================================================================
 # If there's execution history, render it outside the button handler
 # This allows interaction after the workflow finishes
-if "current_execution_history" in st.session_state and st.session_state.current_execution_history:
+if ("current_execution_history" in st.session_state and
+    st.session_state.current_execution_history and
+    not st.session_state.get("workflow_in_progress", False)):
     st.divider()
     st.header("📜 Execution History")
 
