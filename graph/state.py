@@ -102,6 +102,15 @@ class EssayState(TypedDict):
     current_research_highlights: List[dict]  # Updated by researcher - preview of results
     current_draft: str                       # Updated by writer - current draft text
 
+    # ============================================================================
+    # UI-ONLY FIELDS (for timeline display)
+    # ============================================================================
+
+    # These fields are temporary and only used by app.py for execution tracking
+    # They are not persisted and reset with each node execution
+    _ui_prompt: str                          # User message sent to LLM (for timeline)
+    _ui_response: str                        # Raw LLM response (for timeline)
+
 
 def create_initial_state(
     topic: str,
@@ -162,5 +171,7 @@ def create_initial_state(
         "current_outline": "",
         "current_feedback": "",
         "current_research_highlights": [],
-        "current_draft": ""
+        "current_draft": "",
+        "_ui_prompt": "",
+        "_ui_response": ""
     }
