@@ -476,8 +476,7 @@ if generate_clicked:
                 if essay_complete:
                     st.success("✅ Essay Complete!")
                 else:
-                    st.warning("⚠️ Essay Generated (not formally approved)")
-                    st.caption("Workflow ended before formal approval, but a draft is available.")
+                    st.warning("⚠️ Essay Generated (workflow terminated before formal approval)")
 
                 # Display the essay with dark grey background (fixed height, scrollable)
                 st.markdown(
