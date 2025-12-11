@@ -362,24 +362,16 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
                 # Input panel
                 with input_display.container():
-                    st.text_area(
-                        "Prompt sent to model:",
-                        value=selected_entry["model_input"],
-                        height=250,
-                        disabled=True,
-                        label_visibility="collapsed",
-                        key=f"input_{selected_entry['id']}"
+                    st.markdown(
+                        f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
+                        unsafe_allow_html=True
                     )
 
                 # Output panel
                 with output_display.container():
-                    st.text_area(
-                        "Model response:",
-                        value=selected_entry["model_output"],
-                        height=250,
-                        disabled=True,
-                        label_visibility="collapsed",
-                        key=f"output_{selected_entry['id']}"
+                    st.markdown(
+                        f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
+                        unsafe_allow_html=True
                     )
 
             # ================================================================
@@ -417,40 +409,54 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         # ====================================================================
         # UPDATE FINAL ESSAY DISPLAY WHEN COMPLETE
         # ====================================================================
-        if essay_complete and final_draft:
-            with final_essay_placeholder.container():
-                st.success("✅ Essay Complete!")
+        if essay_complete:
+            # Get the latest draft from session state or track it
+            # The final draft should be the last one written
+            if not final_draft and st.session_state.current_execution_history:
+                # Find the most recent writer execution
+                for entry in reversed(st.session_state.current_execution_history):
+                    if entry['agent'] == 'writer':
+                        final_draft = entry['model_output']
+                        break
 
-                # Metadata expander
-                with st.expander("📊 Generation Metadata", expanded=False):
-                    st.write(f"**Topic:** {topic}")
-                    st.write(f"**Target Length:** {max_length} words")
-                    st.write("**Models Used:**")
-                    st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
-                    st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
-                    st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
-                    st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
+            if final_draft:
+                with final_essay_placeholder.container():
+                    st.success("✅ Essay Complete!")
 
-                # Display the essay with dark grey background
-                # Use a container with custom styling
-                essay_container = st.container()
-                with essay_container:
+                    # Top row: Metadata expander (left) + Download button (right)
+                    meta_col1, meta_col2 = st.columns([3, 1])
+
+                    with meta_col1:
+                        # Metadata expander
+                        with st.expander("📊 Generation Metadata", expanded=False):
+                            st.write(f"**Topic:** {topic}")
+                            st.write(f"**Target Length:** {max_length} words")
+                            st.write("**Models Used:**")
+                            st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
+                            st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
+                            st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
+                            st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
+
+                    with meta_col2:
+                        # Download button
+                        st.download_button(
+                            label="📥 Download",
+                            data=final_draft,
+                            file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
+
+                    # Display the essay with dark grey background
                     st.markdown(
                         '<div style="background-color: #262730; padding: 20px; border-radius: 5px; border: 1px solid #404040;">',
                         unsafe_allow_html=True
                     )
                     st.markdown(final_draft)
                     st.markdown('</div>', unsafe_allow_html=True)
-
-                # Download button
-                st.download_button(
-                    label="📥 Download Essay",
-                    data=final_draft,
-                    file_name=f"essay_{topic[:30].replace(' ', '_')}.txt",
-                    mime="text/plain"
-                )
-        else:
-            st.warning("Draft not available in final output. This may indicate an error in the workflow.")
+            else:
+                with final_essay_placeholder.container():
+                    st.warning("Essay approved but draft not found. Please check the execution history for the latest writer output.")
 
     except Exception as e:
         st.error(f"❌ Error during generation: {str(e)}")
@@ -507,24 +513,16 @@ if "current_execution_history" in st.session_state and st.session_state.current_
 
             # Input
             st.subheader("📥 Model Input")
-            st.text_area(
-                "Prompt:",
-                value=selected_entry["model_input"],
-                height=250,
-                disabled=True,
-                label_visibility="collapsed",
-                key=f"history_input_{selected_entry['id']}"
+            st.markdown(
+                f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
+                unsafe_allow_html=True
             )
 
             # Output
             st.subheader("📤 Model Output")
-            st.text_area(
-                "Response:",
-                value=selected_entry["model_output"],
-                height=250,
-                disabled=True,
-                label_visibility="collapsed",
-                key=f"history_output_{selected_entry['id']}"
+            st.markdown(
+                f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
+                unsafe_allow_html=True
             )
 
 # ============================================================================
