@@ -5,6 +5,7 @@ Provides configuration options and real-time streaming of agent progress.
 """
 
 import streamlit as st
+from datetime import datetime
 from dotenv import load_dotenv
 from graph.workflow import create_essay_workflow
 from graph.state import create_initial_state
@@ -12,6 +13,35 @@ from config.models import AVAILABLE_MODELS, get_model_by_id
 
 # Load environment variables
 load_dotenv()
+
+# ============================================================================
+# HELPER FUNCTIONS FOR EXECUTION TRACKING
+# ============================================================================
+
+def create_execution_entry(execution_id: int, agent: str, iteration_num: int,
+                          user_prompt: str, response: str) -> dict:
+    """Create a standardized execution history entry for the timeline UI."""
+    agent_display_names = {
+        "editor": "Editor",
+        "researcher": "Researcher",
+        "writer": "Writer",
+        "critic": "Critic"
+    }
+
+    return {
+        "id": execution_id,
+        "agent": agent,
+        "status": "complete",
+        "timestamp": datetime.now().isoformat(),
+        "iteration_context": f"{agent_display_names.get(agent, agent)} #{iteration_num}",
+        "model_input": user_prompt,      # Only user message (not system)
+        "model_output": response,
+        "parsed_output": {}
+    }
+
+def count_agent_executions(history: list, agent: str) -> int:
+    """Count how many times an agent has executed in the history."""
+    return sum(1 for entry in history if entry["agent"] == agent) + 1
 
 # ============================================================================
 # PAGE CONFIGURATION
@@ -168,56 +198,86 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
         max_essay_length=max_length
     )
 
+    # Initialize session state for UI tracking
+    if "selected_execution_id" not in st.session_state:
+        st.session_state.selected_execution_id = -1
+    if "current_execution_history" not in st.session_state:
+        st.session_state.current_execution_history = []
+
+    # Reset execution history for new generation
+    st.session_state.current_execution_history = []
+    st.session_state.selected_execution_id = -1
+
     # ========================================================================
-    # CREATE UI CONTAINERS FOR REAL-TIME UPDATES - 2x2 GRID
+    # CREATE UI CONTAINERS FOR NEW TIMELINE LAYOUT
     # ========================================================================
 
-    st.header("🔄 Generation Progress")
+    # ========================================================================
+    # TOP ROW: Topic Input (left) + Final Essay (right, greyed initially)
+    # ========================================================================
+    top_col1, top_col2 = st.columns([1, 2])
 
-    # Create 2x2 grid layout
-    col1, col2 = st.columns(2)
+    with top_col1:
+        st.subheader("📝 Topic")
+        st.info(topic)
 
-    # Top row: Outline (left) and Research Highlights (right)
-    with col1:
-        st.subheader("📋 Outline")
-        outline_status = st.empty()
-        outline_display = st.container(height=400)
-
-    with col2:
-        st.subheader("🔍 Research Highlights")
-        research_status = st.empty()
-        research_display = st.container(height=400)
-
-    # Bottom row: Draft (left) and Critical Feedback (right)
-    col3, col4 = st.columns(2)
-
-    with col3:
-        st.subheader("✍️ Draft")
-        draft_status = st.empty()
-        draft_display = st.container(height=400)
-
-    with col4:
-        st.subheader("💭 Critical Feedback")
-        feedback_status = st.empty()
-        feedback_display = st.container(height=400)
+    with top_col2:
+        st.subheader("📄 Final Essay")
+        final_essay_display = st.empty()
+        # Initially show greyed out placeholder
+        with final_essay_display.container():
+            st.markdown(
+                '<div style="background-color: #f0f0f0; padding: 20px; border-radius: 5px; color: #888; text-align: center;">Essay will appear here when complete...</div>',
+                unsafe_allow_html=True
+            )
 
     st.divider()
+    st.header("🔄 Generation Progress")
 
-    final_essay_container = st.empty()
+    # ========================================================================
+    # MAIN CONTENT: Timeline (left) + Details (right)
+    # ========================================================================
+    main_col1, main_col2 = st.columns([1, 2])
+
+    # ------------------------------------------------------------------------
+    # LEFT COLUMN: Progress Timeline
+    # ------------------------------------------------------------------------
+    with main_col1:
+        st.subheader("🕒 Progress Timeline")
+        timeline_container = st.empty()
+
+    # ------------------------------------------------------------------------
+    # RIGHT COLUMN: Execution Details (3 sections stacked)
+    # ------------------------------------------------------------------------
+    with main_col2:
+        # Status Panel (top)
+        st.subheader("📊 Status")
+        status_display = st.empty()
+
+        # Model Input Panel (middle)
+        st.subheader("📥 Model Input")
+        input_display = st.empty()
+
+        # Model Output Panel (bottom)
+        st.subheader("📤 Model Output")
+        output_display = st.empty()
 
     # ========================================================================
     # STREAM GRAPH EXECUTION
     # ========================================================================
 
     try:
-        # Initialize all panels to idle state
-        outline_status.info("⏸️ Editor: Creating outline ...")
-        research_status.info("⏸️ Researcher: Idle")
-        draft_status.info("⏸️ Writer: Idle")
-        feedback_status.info("⏸️ Critic: Idle")
-
         # Track the final draft as we stream
         final_draft = None
+        essay_complete = False
+
+        # Agent icons mapping
+        agent_icons = {
+            "editor": "✏️",
+            "researcher": "🔍",
+            "writer": "✍️",
+            "critic": "💭"
+        }
 
         # Use workflow.stream() for reliable Streamlit compatibility
         for event in workflow.stream(initial_state):
@@ -226,124 +286,121 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             node_output = event[node_name]
 
             # ================================================================
-            # PREDICT NEXT AGENT (show "Working..." for what's coming)
+            # CAPTURE EXECUTION DATA FROM UI FIELDS
             # ================================================================
+            if "_ui_prompt" in node_output and "_ui_response" in node_output:
+                execution_id = len(st.session_state.current_execution_history)
+                iteration_num = count_agent_executions(
+                    st.session_state.current_execution_history,
+                    node_name
+                )
 
-            # After editor: predict based on routing logic
-            if node_name == "editor":
-                if node_output.get("essay_complete"):
-                    # Workflow complete
-                    pass
-                elif node_output.get("draft", "") == "":
-                    # Initial editing phase
-                    if node_output.get("editing_complete"):
-                        draft_status.info("✍️ Writer: Starting draft...")
-                    else:
-                        research_status.info("🔍 Researcher: Starting research...")
+                entry = create_execution_entry(
+                    execution_id=execution_id,
+                    agent=node_name,
+                    iteration_num=iteration_num,
+                    user_prompt=node_output["_ui_prompt"],
+                    response=node_output["_ui_response"]
+                )
+
+                st.session_state.current_execution_history.append(entry)
+                st.session_state.selected_execution_id = execution_id  # Auto-select latest
+
+            # ================================================================
+            # RENDER TIMELINE
+            # ================================================================
+            with timeline_container.container():
+                if st.session_state.current_execution_history:
+                    # Create radio options from execution history
+                    timeline_options = [
+                        f"{agent_icons.get(entry['agent'], '⚙️')} {entry['iteration_context']} - {entry['status'].upper()}"
+                        for entry in st.session_state.current_execution_history
+                    ]
+
+                    # Find index of selected item (default to latest)
+                    selected_index = st.session_state.selected_execution_id
+                    if selected_index >= len(timeline_options):
+                        selected_index = len(timeline_options) - 1
+
+                    # Render timeline with radio buttons
+                    selected_label = st.radio(
+                        "Select execution to view details:",
+                        options=timeline_options,
+                        index=selected_index,
+                        label_visibility="collapsed",
+                        key=f"timeline_radio_{len(st.session_state.current_execution_history)}"
+                    )
+
+                    # Update selected ID based on radio selection
+                    st.session_state.selected_execution_id = timeline_options.index(selected_label)
                 else:
-                    # After critique review
-                    decision = node_output.get("editor_decision", "revise")
-                    if decision == "research":
-                        research_status.info("🔍 Researcher: Starting research...")
-                    else:
-                        draft_status.info("✍️ Writer: Starting revision...")
-
-            # After researcher: always goes to editor
-            elif node_name == "researcher":
-                outline_status.info("🔄 Editor: Reviewing research...")
-
-            # After writer: always goes to critic
-            elif node_name == "writer":
-                feedback_status.info("💭 Critic: Starting evaluation...")
-
-            # After critic: always goes to editor
-            elif node_name == "critic":
-                outline_status.info("🔄 Editor: Reviewing critique...")
+                    st.info("No executions yet. Workflow starting...")
 
             # ================================================================
-            # PROCESS CURRENT NODE OUTPUT
+            # RENDER DETAIL PANELS BASED ON SELECTION
             # ================================================================
+            if st.session_state.selected_execution_id >= 0 and st.session_state.current_execution_history:
+                selected_entry = st.session_state.current_execution_history[st.session_state.selected_execution_id]
 
-            # Panel 1: OUTLINE (Editor)
-            if node_name == "editor":
-                # Update outline display if available
-                if "current_outline" in node_output and node_output["current_outline"]:
-                    with outline_display:
-                        st.markdown(node_output["current_outline"])
+                # Status panel
+                with status_display.container():
+                    timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
+                    st.info(
+                        f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
+                        f"{selected_entry['iteration_context']} | "
+                        f"Status: {selected_entry['status'].upper()} | "
+                        f"Time: {timestamp_formatted}"
+                    )
 
-                # Show completion status
-                if node_output.get("essay_complete"):
-                    outline_status.success("✅ Editor: Essay approved!")
-                elif node_output.get("editing_complete") and node_output.get("draft", "") == "":
-                    outline_status.success("✅ Editor: Outline complete")
-                else:
-                    outline_status.success("✅ Editor: Complete")
+                # Input panel
+                with input_display.container():
+                    st.text_area(
+                        "Prompt sent to model:",
+                        value=selected_entry["model_input"],
+                        height=250,
+                        disabled=True,
+                        label_visibility="collapsed",
+                        key=f"input_{selected_entry['id']}"
+                    )
 
-            # ================================================================
-            # Panel 2: RESEARCH HIGHLIGHTS (Researcher)
-            # ================================================================
-            elif node_name == "researcher":
-                # Display research highlights using the prepared highlights
-                if "current_research_highlights" in node_output and node_output["current_research_highlights"]:
-                    with research_display:
-                        for i, highlight in enumerate(node_output["current_research_highlights"], 1):
-                            st.markdown(f"**Query {i}:** {highlight['query']}")
-                            st.text(highlight['preview'])
-                            st.markdown("---")
-
-                    research_status.success(f"✅ Researcher: Complete ({len(node_output['current_research_highlights'])} results)")
-
-            # ================================================================
-            # Panel 3: DRAFT (Writer)
-            # ================================================================
-            elif node_name == "writer":
-                # Update draft display if available
-                if "current_draft" in node_output and node_output["current_draft"]:
-                    final_draft = node_output["current_draft"]
-                    with draft_display:
-                        st.markdown(node_output["current_draft"])
-
-                    draft_status.success("✅ Writer: Draft complete")
+                # Output panel
+                with output_display.container():
+                    st.text_area(
+                        "Model response:",
+                        value=selected_entry["model_output"],
+                        height=250,
+                        disabled=True,
+                        label_visibility="collapsed",
+                        key=f"output_{selected_entry['id']}"
+                    )
 
             # ================================================================
-            # Panel 4: CRITICAL FEEDBACK (Critic)
+            # TRACK FINAL DRAFT AND ESSAY COMPLETION
             # ================================================================
-            elif node_name == "critic":
-                # Update feedback display if available
-                if "current_feedback" in node_output and node_output["current_feedback"]:
-                    with feedback_display:
-                        st.markdown(node_output["current_feedback"])
+            if node_name == "writer" and "current_draft" in node_output:
+                final_draft = node_output["current_draft"]
 
-                    # Mark complete
-                    feedback_status.success("✅ Critic: Evaluation complete")
+            if node_name == "editor" and node_output.get("essay_complete"):
+                essay_complete = True
 
         # ====================================================================
-        # DISPLAY FINAL ESSAY
+        # UPDATE FINAL ESSAY DISPLAY WHEN COMPLETE
         # ====================================================================
+        if essay_complete and final_draft:
+            with final_essay_display.container():
+                st.success("✅ Essay Complete!")
 
-        # Get final state (note: stream doesn't return final state, so we need to track it)
-        # For now, we'll extract from the last event
-        # In production, you might want to use workflow.get_state() if available
+                # Metadata expander
+                with st.expander("📊 Generation Metadata", expanded=False):
+                    st.write(f"**Topic:** {topic}")
+                    st.write(f"**Target Length:** {max_length} words")
+                    st.write("**Models Used:**")
+                    st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
+                    st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
+                    st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
+                    st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
 
-        st.success("✅ Essay Complete!")
-
-        with final_essay_container:
-            st.header("📄 Final Essay")
-
-            # Metadata expander
-            with st.expander("📊 Generation Metadata", expanded=False):
-                st.write(f"**Topic:** {topic}")
-                st.write(f"**Target Length:** {max_length} words")
-                st.write("**Models Used:**")
-                st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
-                st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
-                st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
-                st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
-
-            # Display the essay
-            # Note: We need to track the final draft from the last writer node output
-            # This is a simplified version - in production you'd track state properly
-            if final_draft:
+                # Display the essay
                 st.markdown(final_draft)
 
                 # Download button

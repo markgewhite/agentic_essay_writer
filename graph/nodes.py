@@ -124,7 +124,10 @@ def editor_node(state: EssayState) -> dict:
             "essay_complete": essay_complete,
             "writing_iteration": 0,  # Reset writing iteration for new cycle
             "current_outline": parsed["outline"],  # For streaming to UI
-            "node_history": updated_history
+            "node_history": updated_history,
+            # UI-only fields for timeline display
+            "_ui_prompt": user_message,
+            "_ui_response": response.content
         }
 
     else:
@@ -175,7 +178,10 @@ def editor_node(state: EssayState) -> dict:
             "editing_iteration": new_iteration,
             "editing_complete": is_complete,
             "current_outline": parsed["outline"],  # For streaming to UI
-            "node_history": updated_history
+            "node_history": updated_history,
+            # UI-only fields for timeline display
+            "_ui_prompt": user_message,
+            "_ui_response": response.content
         }
 
 
@@ -254,11 +260,21 @@ def researcher_node(state: EssayState) -> dict:
     # Get current node history and append this visit
     updated_history = state.get("node_history", []) + ["researcher"]
 
+    # Build UI fields for timeline display
+    queries_list = "\n".join([f"- {q}" for q in state["research_queries"]])
+    summaries_combined = "\n\n".join([
+        f"Query: {result['query']}\n\nSummary:\n{result['summary']}"
+        for result in results if "error" not in result and "summary" in result
+    ])
+
     return {
         "research_results": all_results,
         "research_queries": [],  # Clear queries after execution
         "current_research_highlights": highlights,  # For streaming to UI
-        "node_history": updated_history
+        "node_history": updated_history,
+        # UI-only fields for timeline display
+        "_ui_prompt": f"Research the following queries:\n\n{queries_list}",
+        "_ui_response": summaries_combined if summaries_combined else "Research completed."
     }
 
 
@@ -336,7 +352,10 @@ def writer_node(state: EssayState) -> dict:
         "draft": response.content,
         "writing_iteration": state["writing_iteration"] + 1,
         "current_draft": response.content,  # For streaming to UI
-        "node_history": updated_history
+        "node_history": updated_history,
+        # UI-only fields for timeline display
+        "_ui_prompt": user_message,
+        "_ui_response": response.content
     }
 
 
@@ -399,5 +418,8 @@ def critic_node(state: EssayState) -> dict:
         "feedback": parsed["feedback"],
         "writing_complete": is_complete,
         "current_feedback": parsed["feedback"],  # For streaming to UI
-        "node_history": updated_history
+        "node_history": updated_history,
+        # UI-only fields for timeline display
+        "_ui_prompt": user_message,
+        "_ui_response": response.content
     }
