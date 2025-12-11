@@ -230,6 +230,111 @@ with top_col2:
                 disabled=True
             )
 
+# ============================================================================
+# PERSISTENT PROGRESS SECTION (shown during and after workflow)
+# ============================================================================
+# Initialize session state for UI tracking
+if "selected_execution_id" not in st.session_state:
+    st.session_state.selected_execution_id = -1
+if "current_execution_history" not in st.session_state:
+    st.session_state.current_execution_history = []
+if "workflow_in_progress" not in st.session_state:
+    st.session_state.workflow_in_progress = False
+
+# Show progress section if workflow is running or history exists
+if st.session_state.workflow_in_progress or st.session_state.current_execution_history:
+    st.divider()
+    st.header("🔄 Generation Progress")
+
+    # Status indicator for current activity
+    current_status = st.empty()
+    if st.session_state.workflow_in_progress:
+        current_status.info("🚀 Workflow in progress...")
+
+    # ========================================================================
+    # MAIN CONTENT: Timeline (left) + Details (right)
+    # ========================================================================
+    main_col1, main_col2 = st.columns([1, 2])
+
+    # Agent icons mapping
+    agent_icons = {
+        "editor": "✏️",
+        "researcher": "🔍",
+        "writer": "✍️",
+        "critic": "💭"
+    }
+
+    # ------------------------------------------------------------------------
+    # LEFT COLUMN: Progress Timeline
+    # ------------------------------------------------------------------------
+    with main_col1:
+        st.subheader("🕒 Timeline")
+
+        if st.session_state.current_execution_history:
+            for entry in st.session_state.current_execution_history:
+                icon = agent_icons.get(entry['agent'], '⚙️')
+                label = f"{icon} {entry['iteration_context']}"
+
+                # Highlight the selected entry
+                if entry['id'] == st.session_state.selected_execution_id:
+                    st.success(f"**{label}**")
+                else:
+                    # Clickable only if workflow is NOT in progress
+                    if not st.session_state.workflow_in_progress:
+                        if st.button(label, key=f"timeline_btn_{entry['id']}", use_container_width=True):
+                            st.session_state.selected_execution_id = entry['id']
+                            st.rerun()
+                    else:
+                        st.info(label)
+
+            if st.session_state.workflow_in_progress:
+                st.info("ℹ️ Progress is reported during processing. Once complete, you can review any step of the process.", icon="ℹ️")
+        else:
+            st.info("No executions yet. Click Generate to start.")
+
+    # ------------------------------------------------------------------------
+    # RIGHT COLUMN: Execution Details (3 sections stacked)
+    # ------------------------------------------------------------------------
+    with main_col2:
+        if st.session_state.selected_execution_id >= 0 and st.session_state.current_execution_history:
+            # Find entry by ID
+            selected_entry = next(
+                (entry for entry in st.session_state.current_execution_history
+                 if entry['id'] == st.session_state.selected_execution_id),
+                None
+            )
+
+            if not selected_entry and st.session_state.current_execution_history:
+                selected_entry = st.session_state.current_execution_history[-1]
+
+            if selected_entry:
+                # Status Panel (top)
+                st.subheader("📊 Status")
+                timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
+                st.info(
+                    f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
+                    f"{selected_entry['iteration_context']} | "
+                    f"Status: {selected_entry['status'].upper()} | "
+                    f"Time: {timestamp_formatted}"
+                )
+
+                # Model Input Panel (middle)
+                st.subheader("📥 Model Input")
+                st.markdown(
+                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
+                    unsafe_allow_html=True
+                )
+
+                # Model Output Panel (bottom)
+                st.subheader("📤 Model Output")
+                st.markdown(
+                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
+                    unsafe_allow_html=True
+                )
+
+# ============================================================================
+# WORKFLOW EXECUTION (when button is clicked)
+# ============================================================================
 if generate_clicked:
 
     # Create workflow
@@ -260,60 +365,19 @@ if generate_clicked:
         max_results_per_query=max_results_per_query
     )
 
-    # Initialize session state for UI tracking
-    if "selected_execution_id" not in st.session_state:
-        st.session_state.selected_execution_id = -1
-    if "current_execution_history" not in st.session_state:
-        st.session_state.current_execution_history = []
-
     # Reset execution history for new generation
     st.session_state.current_execution_history = []
     st.session_state.selected_execution_id = -1
-    st.session_state.workflow_in_progress = True  # Flag to prevent duplicate rendering
-    st.session_state.workflow_start_time = datetime.now()  # Track when workflow started
+    st.session_state.workflow_in_progress = True
+    st.session_state.workflow_start_time = datetime.now()
 
     # ========================================================================
-    # CREATE UI CONTAINERS FOR TIMELINE LAYOUT
+    # STREAM GRAPH EXECUTION WITH REAL-TIME STATUS
     # ========================================================================
-
     st.divider()
-    st.header("🔄 Generation Progress")
-
-    # Status indicator for current activity
+    st.header("🔄 Workflow Status")
     current_status = st.empty()
     current_status.info("🚀 Starting workflow...")
-
-    # ========================================================================
-    # MAIN CONTENT: Timeline (left) + Details (right)
-    # ========================================================================
-    main_col1, main_col2 = st.columns([1, 2])
-
-    # ------------------------------------------------------------------------
-    # LEFT COLUMN: Progress Timeline
-    # ------------------------------------------------------------------------
-    with main_col1:
-        st.subheader("🕒 Progress Timeline")
-        timeline_container = st.empty()
-
-    # ------------------------------------------------------------------------
-    # RIGHT COLUMN: Execution Details (3 sections stacked)
-    # ------------------------------------------------------------------------
-    with main_col2:
-        # Status Panel (top)
-        st.subheader("📊 Status")
-        status_display = st.empty()
-
-        # Model Input Panel (middle)
-        st.subheader("📥 Model Input")
-        input_display = st.empty()
-
-        # Model Output Panel (bottom)
-        st.subheader("📤 Model Output")
-        output_display = st.empty()
-
-    # ========================================================================
-    # STREAM GRAPH EXECUTION
-    # ========================================================================
 
     try:
         # Track the final draft as we stream
@@ -368,65 +432,6 @@ if generate_clicked:
 
                 st.session_state.current_execution_history.append(entry)
                 st.session_state.selected_execution_id = execution_id  # Auto-select latest
-
-            # ================================================================
-            # RENDER TIMELINE (display-only during workflow to avoid GeneratorExit)
-            # ================================================================
-            with timeline_container.container():
-                if st.session_state.current_execution_history:
-                    # Display-only timeline during execution
-                    # (Interactive buttons would interrupt the stream)
-                    for entry in st.session_state.current_execution_history:
-                        icon = agent_icons.get(entry['agent'], '⚙️')
-                        label = f"{icon} {entry['iteration_context']}"
-
-                        # Highlight the selected/latest entry
-                        if entry['id'] == st.session_state.selected_execution_id:
-                            st.success(f"**{label}**")
-                        else:
-                            st.info(label)
-                else:
-                    st.info("No executions yet. Workflow starting...")
-
-            # ================================================================
-            # RENDER DETAIL PANELS BASED ON SELECTION
-            # ================================================================
-            if st.session_state.selected_execution_id >= 0 and st.session_state.current_execution_history:
-                # Find entry by ID, not by index (safer)
-                selected_entry = next(
-                    (entry for entry in st.session_state.current_execution_history
-                     if entry['id'] == st.session_state.selected_execution_id),
-                    None
-                )
-
-                if not selected_entry:
-                    # Fallback to last entry if ID not found
-                    selected_entry = st.session_state.current_execution_history[-1] if st.session_state.current_execution_history else None
-
-                if selected_entry:
-                    # Status panel
-                    with status_display.container():
-                        timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
-                        st.info(
-                            f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
-                            f"{selected_entry['iteration_context']} | "
-                            f"Status: {selected_entry['status'].upper()} | "
-                            f"Time: {timestamp_formatted}"
-                        )
-
-                    # Input panel
-                    with input_display.container():
-                        st.markdown(
-                            f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
-                            unsafe_allow_html=True
-                        )
-
-                    # Output panel
-                    with output_display.container():
-                        st.markdown(
-                            f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
-                            unsafe_allow_html=True
-                        )
 
             # ================================================================
             # TRACK FINAL DRAFT AND ESSAY COMPLETION
@@ -527,81 +532,6 @@ if generate_clicked:
         st.exception(e)
         # Mark workflow as complete (even on error)
         st.session_state.workflow_in_progress = False
-
-# ============================================================================
-# PERSISTENT TIMELINE VIEW (after workflow completes)
-# ============================================================================
-# If there's execution history, render it outside the button handler
-# This allows interaction after the workflow finishes
-if ("current_execution_history" in st.session_state and
-    st.session_state.current_execution_history and
-    not st.session_state.get("workflow_in_progress", False)):
-    st.divider()
-    st.header("📜 Execution History")
-
-    agent_icons = {
-        "editor": "✏️",
-        "researcher": "🔍",
-        "writer": "✍️",
-        "critic": "💭"
-    }
-
-    view_col1, view_col2 = st.columns([1, 2])
-
-    # Timeline
-    with view_col1:
-        st.subheader("🕒 Timeline")
-        for entry in st.session_state.current_execution_history:
-            icon = agent_icons.get(entry['agent'], '⚙️')
-            label = f"{icon} {entry['iteration_context']}"
-
-            # Highlight the selected entry
-            if entry['id'] == st.session_state.selected_execution_id:
-                st.success(f"**{label}**")
-            else:
-                # Clickable button
-                if st.button(label, key=f"history_btn_{entry['id']}", use_container_width=True):
-                    st.session_state.selected_execution_id = entry['id']
-                    st.rerun()
-
-    # Detail panels
-    with view_col2:
-        if st.session_state.selected_execution_id >= 0:
-            # Find entry by ID, not by index (safer)
-            selected_entry = next(
-                (entry for entry in st.session_state.current_execution_history
-                 if entry['id'] == st.session_state.selected_execution_id),
-                None
-            )
-
-            if not selected_entry and st.session_state.current_execution_history:
-                # Fallback to last entry if ID not found
-                selected_entry = st.session_state.current_execution_history[-1]
-
-            if selected_entry:
-                # Status
-                st.subheader("📊 Status")
-                timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
-                st.info(
-                    f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
-                    f"{selected_entry['iteration_context']} | "
-                    f"Status: {selected_entry['status'].upper()} | "
-                    f"Time: {timestamp_formatted}"
-                )
-
-                # Input
-                st.subheader("📥 Model Input")
-                st.markdown(
-                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_input"]}</div>',
-                    unsafe_allow_html=True
-                )
-
-                # Output
-                st.subheader("📤 Model Output")
-                st.markdown(
-                    f'<div style="background-color: #1e1e1e; color: white; padding: 15px; border-radius: 5px; height: 375px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #404040;">{selected_entry["model_output"]}</div>',
-                    unsafe_allow_html=True
-                )
 
 # ============================================================================
 # FOOTER
