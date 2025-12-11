@@ -298,10 +298,8 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
             # ================================================================
             # CAPTURE EXECUTION DATA FROM UI FIELDS
             # ================================================================
-            # Debug output to console
             ui_prompt = node_output.get("_ui_prompt", "")
             ui_response = node_output.get("_ui_response", "")
-            print(f"DEBUG {node_name}: prompt_len={len(ui_prompt)}, response_len={len(ui_response)}")
 
             # Only capture if fields have actual values (not empty strings)
             if ui_prompt and ui_response:
@@ -321,23 +319,28 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
 
                 st.session_state.current_execution_history.append(entry)
                 st.session_state.selected_execution_id = execution_id  # Auto-select latest
-                print(f"✓ Captured execution {execution_id} for {node_name}")
-            else:
-                print(f"✗ Skipped {node_name} (no LLM call or empty fields)")
 
             # ================================================================
-            # RENDER TIMELINE (display-only for now)
+            # RENDER TIMELINE (clickable buttons)
             # ================================================================
             with timeline_container.container():
                 if st.session_state.current_execution_history:
-                    # Display timeline as a list (non-interactive)
+                    # Display timeline with clickable buttons
                     for entry in st.session_state.current_execution_history:
                         icon = agent_icons.get(entry['agent'], '⚙️')
-                        # Highlight the selected/latest entry
-                        if entry['id'] == st.session_state.selected_execution_id:
-                            st.success(f"**{icon} {entry['iteration_context']} - {entry['status'].upper()}**")
-                        else:
-                            st.info(f"{icon} {entry['iteration_context']} - {entry['status'].upper()}")
+                        label = f"{icon} {entry['iteration_context']} - {entry['status'].upper()}"
+
+                        # Use columns to create button with colored background
+                        col = st.columns(1)[0]
+                        with col:
+                            # Highlight the selected/latest entry
+                            if entry['id'] == st.session_state.selected_execution_id:
+                                st.success(f"**{label}**")
+                            else:
+                                # Create clickable button
+                                if st.button(label, key=f"timeline_btn_{entry['id']}", use_container_width=True):
+                                    st.session_state.selected_execution_id = entry['id']
+                                    st.rerun()
                 else:
                     st.info("No executions yet. Workflow starting...")
 
@@ -452,6 +455,77 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     except Exception as e:
         st.error(f"❌ Error during generation: {str(e)}")
         st.exception(e)
+
+# ============================================================================
+# PERSISTENT TIMELINE VIEW (after workflow completes)
+# ============================================================================
+# If there's execution history, render it outside the button handler
+# This allows interaction after the workflow finishes
+if "current_execution_history" in st.session_state and st.session_state.current_execution_history:
+    st.divider()
+    st.header("📜 Execution History")
+
+    agent_icons = {
+        "editor": "✏️",
+        "researcher": "🔍",
+        "writer": "✍️",
+        "critic": "💭"
+    }
+
+    view_col1, view_col2 = st.columns([1, 2])
+
+    # Timeline
+    with view_col1:
+        st.subheader("🕒 Timeline")
+        for entry in st.session_state.current_execution_history:
+            icon = agent_icons.get(entry['agent'], '⚙️')
+            label = f"{icon} {entry['iteration_context']}"
+
+            # Highlight the selected entry
+            if entry['id'] == st.session_state.selected_execution_id:
+                st.success(f"**{label}**")
+            else:
+                # Clickable button
+                if st.button(label, key=f"history_btn_{entry['id']}", use_container_width=True):
+                    st.session_state.selected_execution_id = entry['id']
+                    st.rerun()
+
+    # Detail panels
+    with view_col2:
+        if st.session_state.selected_execution_id >= 0:
+            selected_entry = st.session_state.current_execution_history[st.session_state.selected_execution_id]
+
+            # Status
+            st.subheader("📊 Status")
+            timestamp_formatted = datetime.fromisoformat(selected_entry['timestamp']).strftime('%H:%M:%S')
+            st.info(
+                f"{agent_icons.get(selected_entry['agent'], '⚙️')} "
+                f"{selected_entry['iteration_context']} | "
+                f"Status: {selected_entry['status'].upper()} | "
+                f"Time: {timestamp_formatted}"
+            )
+
+            # Input
+            st.subheader("📥 Model Input")
+            st.text_area(
+                "Prompt:",
+                value=selected_entry["model_input"],
+                height=250,
+                disabled=True,
+                label_visibility="collapsed",
+                key=f"history_input_{selected_entry['id']}"
+            )
+
+            # Output
+            st.subheader("📤 Model Output")
+            st.text_area(
+                "Response:",
+                value=selected_entry["model_output"],
+                height=250,
+                disabled=True,
+                label_visibility="collapsed",
+                key=f"history_output_{selected_entry['id']}"
+            )
 
 # ============================================================================
 # FOOTER
