@@ -224,6 +224,7 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
     st.session_state.current_execution_history = []
     st.session_state.selected_execution_id = -1
     st.session_state.workflow_in_progress = True  # Flag to prevent duplicate rendering
+    st.session_state.workflow_start_time = datetime.now()  # Track when workflow started
 
     # ========================================================================
     # CREATE UI CONTAINERS FOR TIMELINE LAYOUT
@@ -466,6 +467,14 @@ if st.button("Generate Essay", type="primary", disabled=not topic):
                     st.warning("Essay approved but draft not found. Please check the execution history for the latest writer output.")
 
         # Mark workflow as complete
+        st.session_state.workflow_in_progress = False
+        elapsed_time = datetime.now() - st.session_state.workflow_start_time
+        current_status.success(f"✅ Workflow completed successfully in {elapsed_time.total_seconds():.1f} seconds!")
+
+    except GeneratorExit:
+        # Stream was interrupted (user left page, connection lost, etc.)
+        st.warning("⚠️ Workflow stream was interrupted. The workflow may still be running in the background.")
+        st.info("If you navigated away and returned, please refresh the page to start a new session.")
         st.session_state.workflow_in_progress = False
 
     except Exception as e:
