@@ -92,27 +92,38 @@ Analyze the benefits and challenges of remote work in modern organizations
 ### Configuration for Testing
 
 Start with conservative settings:
-- Model: gpt-4o-mini (faster and cheaper)
-- Max Essay Length: 1000 words
-- Max Planning Iterations: 2
-- Max Writing Iterations: 2
+- **Editor Model**: GPT-5 Mini (faster and cheaper for testing)
+- **Researcher Model**: GPT-5 Nano (cheapest option)
+- **Writer Model**: GPT-5 Mini (balanced)
+- **Critic Model**: GPT-5 Mini (or Claude Haiku for different perspective)
+- **Max Essay Length**: 1000 words
+- **Max Editing Iterations**: 3
+- **Max Critique Cycles**: 2
+- **Max Writing Iterations**: 2
+- **Max Queries per Research Request**: 2
+- **Max Results per Query**: 3
 
 ### What to Expect
 
-1. **Planning Phase** (30-60 seconds):
-   - Planner analyzes topic
+1. **Editing Phase** (30-90 seconds):
+   - Editor develops thesis and outline
+   - Editor commissions research queries
    - Researcher gathers web data
-   - Outline appears in left column
+   - Timeline shows Editor and Researcher entries
+   - Process repeats until outline is complete
 
-2. **Writing Phase** (60-120 seconds):
-   - Writer generates draft
-   - Critic provides feedback
-   - Feedback appears in right column
-   - Writer revises (if needed)
+2. **Writing & Critique Phase** (60-120 seconds):
+   - Writer generates initial draft
+   - Critic evaluates quality and provides feedback
+   - Editor reviews feedback and decides next step
+   - Timeline shows Writer, Critic, and Editor entries
+   - May loop through research → writing → critique as needed
 
 3. **Completion**:
-   - Final essay displayed
-   - Download button available
+   - Final essay displayed in top-right panel
+   - Timeline shows complete execution history
+   - Click any timeline entry to view that agent's work
+   - Download button available for final essay
 
 ## Project Structure Overview
 
@@ -141,18 +152,18 @@ Defines the data structure that flows through all agents.
 
 ### 2. Agent Nodes (`graph/nodes.py`)
 Four agent implementations:
-- `planner_node` - Creates thesis and outline
-- `researcher_node` - Executes web searches
-- `writer_node` - Generates/revises drafts
-- `critic_node` - Evaluates and provides feedback
+- `editor_node` - Develops thesis/outline, commissions research, reviews critiques, directs revisions
+- `researcher_node` - Executes web searches with configurable query/result limits
+- `writer_node` - Generates/revises drafts based on editor direction
+- `critic_node` - Evaluates quality and provides detailed feedback
 
 ### 3. Workflow (`graph/workflow.py`)
-LangGraph configuration with two feedback loops:
-- Planning: planner ↔ researcher
-- Writing: writer ↔ critic
+LangGraph configuration with editor-orchestrated routing:
+- Editing phase: editor ↔ researcher (outline development)
+- Critique phase: writer → critic → editor → (research/revise/approve)
 
 ### 4. Streamlit App (`app.py`)
-Web interface with real-time progress updates.
+Web interface with interactive timeline and execution history tracking.
 
 ## Development Tips
 
@@ -180,7 +191,10 @@ state = create_initial_state(
     critic_model=get_model_by_id("claude-sonnet-4.5"),
     max_editing_iterations=2,
     max_critique_iterations=2,
-    max_writing_iterations=2
+    max_writing_iterations=2,
+    max_essay_length=1500,
+    max_queries=3,
+    max_results_per_query=5
 )
 
 # Test editor
@@ -195,29 +209,39 @@ Edit `config/prompts.py` to adjust agent behavior:
 - Adjust critic's standards
 - Change writer's style
 
-### Adjusting Iteration Limits
+### Adjusting Parameters
 
-In `app.py`, change slider defaults:
+In `app.py`, change slider defaults and ranges:
 ```python
-max_planning = st.slider("Max Planning Iterations", 1, 10, 3)  # Changed default to 3
+max_editing = st.slider("Max Editing Iterations", min_value=2, max_value=12, value=5)
+max_queries = st.slider("Max Queries per Research Request", min_value=1, max_value=5, value=3)
 ```
 
 ## Common Workflows
 
 ### Academic Essays
 - Max length: 1500-3000 words
-- Planning iterations: 2-3 (more research needed)
-- Writing iterations: 3-4 (higher quality standards)
+- Max editing iterations: 4-6 (comprehensive outline development)
+- Max critique cycles: 3-4 (higher quality standards)
+- Max writing iterations: 3-4 (detailed revisions)
+- Max queries per request: 3-4
+- Max results per query: 5-7
 
 ### Quick Analyses
 - Max length: 500-1000 words
-- Planning iterations: 1-2
-- Writing iterations: 2-3
+- Max editing iterations: 2-3
+- Max critique cycles: 2
+- Max writing iterations: 2-3
+- Max queries per request: 2-3
+- Max results per query: 3-5
 
 ### In-Depth Research Papers
 - Max length: 3000-5000 words
-- Planning iterations: 3-5
-- Writing iterations: 4-5
+- Max editing iterations: 6-8 (extensive research needed)
+- Max critique cycles: 4-5 (very high quality standards)
+- Max writing iterations: 4-5 (thorough revisions)
+- Max queries per request: 4-5
+- Max results per query: 7-10
 
 ## Next Steps
 

@@ -86,10 +86,15 @@ This creates a **self-improving system** that iterates until quality standards a
 
 **Token Usage**: ~50,000 tokens per research cycle (summarizing multiple web sources)
 
+**Configuration**:
+- Uses `max_queries` from state to limit number of queries
+- Uses `max_results_per_query` from state to control search depth
+- Helps control token usage and costs
+
 **Key State Updates**:
 ```python
 {
-    "research_results": ["...", "..."]  # Appends new research summaries
+    "research_results": [{"query": "...", "results": [...]}]  # Appends new research with query context
 }
 ```
 
@@ -159,12 +164,12 @@ The workflow operates on a comprehensive state object that flows through all nod
 ```python
 class EssayState(TypedDict):
     # Core content
-    messages: List[dict]
+    messages: List[BaseMessage]
     topic: str
     thesis: str
     outline: str
     research_queries: List[str]
-    research_results: List[str]
+    research_results: List[dict]  # Changed to dict format with query context
     draft: str
     feedback: str
     editor_direction: str
@@ -182,6 +187,8 @@ class EssayState(TypedDict):
 
     # Configuration
     max_essay_length: int
+    max_queries: int                # NEW: Limit queries per research request
+    max_results_per_query: int      # NEW: Limit results per query
     editor_model: dict
     researcher_model: dict
     writer_model: dict
@@ -190,7 +197,7 @@ class EssayState(TypedDict):
     # Tracking
     node_history: List[str]
 
-    # Streaming UI
+    # Streaming UI (not shown in all examples)
     current_outline: str
     current_research_highlights: List[dict]
     current_draft: str
@@ -211,7 +218,9 @@ initial_state = create_initial_state(
     max_editing_iterations=5,
     max_critique_iterations=3,
     max_writing_iterations=2,
-    max_essay_length=1500
+    max_essay_length=1500,
+    max_queries=3,              # NEW: Limit research queries
+    max_results_per_query=5     # NEW: Limit search results per query
 )
 ```
 
@@ -694,9 +703,15 @@ def researcher_node(state: EssayState) -> dict:
         state["researcher_model"]["name"]
     )
 
-    # Execute Tavily searches
+    # Execute Tavily searches with configurable limits
     queries = state.get("research_queries", [])
-    research_tool = TavilySearchResults(max_results=3)
+    max_queries = state.get("max_queries", 3)
+    max_results = state.get("max_results_per_query", 5)
+
+    # Limit queries to max_queries
+    queries = queries[:max_queries]
+
+    research_tool = TavilySearchResults(max_results=max_results)
 
     all_results = []
     for query in queries:
@@ -737,6 +752,7 @@ def researcher_node(state: EssayState) -> dict:
 - LLM must process ~50,000 tokens of raw web content
 - Synthesizes into concise summary
 - **Cost optimization critical**: Use cheapest capable model
+- **Configuration helps**: Reduce `max_queries` and `max_results_per_query` to lower token usage and costs
 
 ---
 
@@ -864,7 +880,12 @@ Three separate iteration limits control workflow loops:
 
 **Limit Behavior**: When `editing_iteration > max_editing_iterations`, editor is **forced** to set `editing_complete=True`, advancing to writing phase.
 
-**Typical Value**: 3-5 iterations
+**Range**: 2-12 iterations
+**Default**: 5 iterations
+**Typical Values**:
+- Quick essays: 2-3
+- Standard essays: 4-6
+- Research papers: 6-8
 
 ---
 
@@ -876,7 +897,12 @@ Three separate iteration limits control workflow loops:
 
 **Limit Behavior**: When `critique_iteration >= max_critique_iterations`, editor is **forced** to approve essay (set `essay_complete=True`).
 
-**Typical Value**: 2-3 cycles
+**Range**: 1-8 cycles
+**Default**: 3 cycles
+**Typical Values**:
+- Quick essays: 2
+- Standard essays: 3-4
+- Research papers: 4-5
 
 ---
 
@@ -888,9 +914,45 @@ Three separate iteration limits control workflow loops:
 
 **Limit Behavior**: When `writing_iteration > max_writing_iterations`, writer returns existing draft unchanged.
 
-**Typical Value**: 2-3 iterations
+**Range**: 2-8 iterations
+**Default**: 3 iterations
+**Typical Values**:
+- Quick essays: 2-3
+- Standard essays: 3-4
+- Research papers: 4-5
 
 **Note**: This counter is **reset to 0** when editor commissions research (`editor_decision="research"` or `"pass_to_writer"`), allowing fresh revisions after new information is available.
+
+---
+
+### 4. Research Configuration (NEW)
+
+**Max Queries per Research Request**:
+- **Controls**: Number of search queries the editor can request at once
+- **Range**: 1-5 queries
+- **Default**: 3 queries
+- **Impact**: More queries = broader research but higher token usage
+
+**Max Results per Query**:
+- **Controls**: Number of search results retrieved per query
+- **Range**: 2-10 results
+- **Default**: 5 results
+- **Impact**: More results = deeper research but significantly higher token usage
+
+**Cost Optimization Strategy**:
+```python
+# Low-cost setup (minimal research)
+max_queries=2
+max_results_per_query=3
+
+# Balanced setup (recommended)
+max_queries=3
+max_results_per_query=5
+
+# Comprehensive research (high cost)
+max_queries=4
+max_results_per_query=8
+```
 
 ---
 
@@ -970,17 +1032,22 @@ initial_state = create_initial_state(
     editor_model=get_model_by_id("gpt-5.1"),          # Most capable
     researcher_model=get_model_by_id("gpt-5-nano"),   # Cheapest
     writer_model=get_model_by_id("gpt-5-mini"),       # Balanced
-    critic_model=get_model_by_id("claude-sonnet-4.5") # Different provider
+    critic_model=get_model_by_id("claude-sonnet-4.5"), # Different provider
+    max_queries=3,                                     # Moderate research
+    max_results_per_query=5                            # Balanced depth
 )
 ```
 
 **Rationale**:
 - **Editor**: Strategic decisions require best reasoning → premium model
-- **Researcher**: Summarization task with high token volume → cheapest model
+- **Researcher**: Summarization task with high token volume → cheapest model + limited queries
 - **Writer**: Quality prose but not deep reasoning → mid-tier model
 - **Critic**: Different perspective valuable → alternate provider
 
-**Cost Impact**: Can reduce costs by 10-20x compared to using premium model for everything, with minimal quality degradation.
+**Cost Impact**:
+- Model selection: Can reduce costs by 10-20x compared to using premium model for everything
+- Research configuration: Reducing `max_queries` from 5 to 3 and `max_results_per_query` from 10 to 5 can cut research costs in half
+- Combined: Total cost savings of 15-30x with minimal quality impact
 
 ---
 

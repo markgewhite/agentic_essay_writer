@@ -71,21 +71,23 @@ This creates a **dynamic, adaptive workflow** that responds to essay quality in 
 - 📝 **Automated Research & Writing**: From topic to polished essay
 - 🧠 **Intelligent Agent Orchestration**: Editor-driven adaptive workflow
 - 🔄 **Multi-Phase Feedback Loops**: Separate editing and critique cycles
-- ⚡ **Real-Time Streaming UI**: Watch agents work with live status updates
+- ⚡ **Real-Time Progress Tracking**: Interactive timeline view with execution history
 
 ### Advanced Features
 - 🎛️ **Per-Agent Model Configuration**: Optimize cost vs. quality per agent
 - 📊 **LangSmith Integration**: Full traceability and performance monitoring
 - 🌐 **Multi-Provider Support**: OpenAI, Anthropic (Claude), Google (Gemini)
 - 💰 **Cost Optimization**: Use cheap models for research, premium for critical thinking
-- 🔍 **Web Research**: Tavily integration for current, factual information
+- 🔍 **Configurable Web Research**: Control query count and result depth with Tavily integration
 - 📈 **Configurable Iteration Limits**: Control loops per editing/critique cycle
+- 🕒 **Execution Timeline**: View detailed agent executions with clickable history
 
 ### Production Ready
-- 🚀 **Streamlit Web Interface**: Professional, responsive UI
+- 🚀 **Streamlit Web Interface**: Professional, responsive UI with layout optimization
 - ☁️ **Cloud Deployment**: Configured for Render.com
 - 🛡️ **Error Handling**: Robust parsing and validation
 - 📦 **Clean Architecture**: Modular, maintainable codebase
+- 🎯 **Stable Layout**: Placeholder pattern prevents UI shifts during generation
 
 ## 🚀 Quick Start
 
@@ -158,19 +160,39 @@ The researcher agent uses ~50,000 tokens **per research request** (summarizing w
 ### Workflow Controls
 
 **Iteration Limits:**
-- **Max Editing Iterations** (1-10): Research/outline refinement cycles
-- **Max Critique Cycles** (1-5): Full editor review → write/research → critique cycles
-- **Max Writing Iterations** (1-3): Revisions within a single critique cycle
+- **Max Editing Iterations** (2-12, default: 5): Research/outline refinement cycles
+- **Max Critique Cycles** (1-8, default: 3): Full editor review → write/research → critique cycles
+- **Max Writing Iterations** (2-8, default: 3): Revisions within a single critique cycle
 
-**Target Length:** 500-5000 words
+**Research Parameters:**
+- **Max Queries per Research Request** (1-5, default: 3): Number of search queries per research request
+- **Max Results per Query** (2-10, default: 5): Search results retrieved per query
+
+**Target Length:** 500-5000 words (default: 1500)
 
 ### Generating Essays
 
 1. **Configure models** per agent (left sidebar)
-2. **Set iteration limits** and target length
+2. **Set iteration limits**, research parameters, and target length
 3. **Enter topic**: Be specific (e.g., "Analyze AI's impact on modern education")
-4. **Generate**: Watch real-time progress
-5. **Download**: Get final essay as .txt file
+4. **Generate**: Watch real-time progress in interactive timeline
+5. **Review execution history**: Click any timeline entry to view agent inputs/outputs
+6. **Download**: Get final essay as .txt file
+
+### Using the Interactive Timeline
+
+During and after generation, the timeline view shows:
+- **Progress Timeline** (left): Chronological list of agent executions
+- **Execution Details** (right): Model inputs and outputs for selected execution
+- **Click any entry** in the timeline to inspect that agent's work
+- **Status panel**: Shows agent type, iteration number, and timestamp
+- **Model I/O panels**: View exact prompts sent to and responses from each model
+
+This provides full transparency into how the essay was generated, useful for:
+- Understanding agent decision-making
+- Debugging workflow issues
+- Learning how prompts affect outputs
+- Optimizing model selection per agent
 
 ## 📁 Project Structure
 
@@ -205,8 +227,9 @@ essay_writer/
 - **Editorial State**: `thesis`, `outline`, `research_queries`, `research_results`
 - **Writing State**: `draft`, `feedback`, `editor_direction`, `editor_decision`
 - **Control State**: Iteration counters, completion flags, node history
+- **Research Config**: `max_queries`, `max_results_per_query`
 - **Model Config**: Per-agent model specifications
-- **Streaming Fields**: Real-time UI updates
+- **Streaming Fields**: Real-time UI updates with execution history
 
 ### Routing Logic
 
@@ -332,15 +355,23 @@ streamlit run app.py --server.port 8501 --server.headless true
 - ✅ Use GPT-5 Nano or GPT-4o Mini for researcher
 - ✅ Research tasks process ~50K tokens per cycle
 - ✅ Cheap models save 10-20x costs here
+- ✅ Reduce "Max Results per Query" to lower token usage
 
 **"Essay generation stops early"**
 - Check LangSmith traces for errors
 - Verify API rate limits/quotas
 - Increase iteration limits if needed
+- Review execution timeline to see where it stopped
 
-**"Status banners not updating"**
-- Updates occur after each node completes (by design)
-- Not token-by-token streaming, but node-by-node
+**"Too many or too few research results"**
+- Adjust "Max Queries per Research Request" (1-5)
+- Adjust "Max Results per Query" (2-10)
+- Higher values = more comprehensive research but higher costs
+
+**"Timeline not showing entries"**
+- Timeline appears only after clicking Generate
+- Entries are added as each agent completes
+- Click any entry to view its details (only when workflow complete)
 
 **"API Key errors"**
 - Ensure `.env` file exists in project root
