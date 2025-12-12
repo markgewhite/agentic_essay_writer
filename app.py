@@ -77,9 +77,6 @@ def render_timeline(placeholder):
                             st.rerun()
                     else:
                         st.info(label)
-
-            if st.session_state.workflow_in_progress:
-                st.info("ℹ️ Progress updates live below...", icon="ℹ️")
         else:
             st.info("No executions yet. Click Generate to start.")
 
@@ -178,8 +175,8 @@ with st.sidebar:
     st.subheader("Iteration Limits")
     max_editing = st.slider(
         "Max Editing Iterations",
-        min_value=1,
-        max_value=10,
+        min_value=2,
+        max_value=12,
         value=5,
         help="Maximum times the editor can request research for the outline"
     )
@@ -187,17 +184,17 @@ with st.sidebar:
     max_critique = st.slider(
         "Max Critique Cycles",
         min_value=1,
-        max_value=5,
+        max_value=8,
         value=3,
         help="Maximum full cycles through editor review → research/writing → critique"
     )
 
     max_writing = st.slider(
-        "Max Writing Iterations (per cycle)",
-        min_value=1,
-        max_value=3,
-        value=2,
-        help="Maximum revisions within a single critique cycle"
+        "Max Writing Iterations",
+        min_value=2,
+        max_value=8,
+        value=3,
+        help="Maximum number of drafts"
     )
 
     st.divider()
@@ -205,17 +202,17 @@ with st.sidebar:
     st.subheader("Research Parameters")
     max_queries = st.slider(
         "Max Queries per Research Request",
-        min_value=2,
-        max_value=8,
+        min_value=1,
+        max_value=5,
         value=3,
         help="Maximum number of research queries the editor can request at once"
     )
 
     max_results_per_query = st.slider(
         "Max Results per Query",
-        min_value=1,
-        max_value=5,
-        value=3,
+        min_value=2,
+        max_value=10,
+        value=5,
         help="Number of search results to retrieve for each research query"
     )
 
@@ -284,8 +281,12 @@ if "current_execution_history" not in st.session_state:
 if "workflow_in_progress" not in st.session_state:
     st.session_state.workflow_in_progress = False
 
-# Show progress section if workflow is running or history exists
-if st.session_state.workflow_in_progress or st.session_state.current_execution_history:
+# Initialize these variables to None first so the linter knows they exist
+current_status = None
+timeline_placeholder = None
+
+# Show progress section if workflow is running, history exists, OR we just clicked generate
+if st.session_state.workflow_in_progress or st.session_state.current_execution_history or generate_clicked:
     st.divider()
     st.header("🔄 Generation Progress")
 
@@ -399,9 +400,6 @@ if generate_clicked:
     # ========================================================================
     # STREAM GRAPH EXECUTION WITH REAL-TIME STATUS
     # ========================================================================
-    st.divider()
-    st.header("🔄 Workflow Status")
-    current_status = st.empty()
     current_status.info("🚀 Starting workflow...")
 
     # We must clear the previous timeline and re-render the empty state
