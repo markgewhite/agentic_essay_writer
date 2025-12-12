@@ -14,12 +14,13 @@ from config.models import AVAILABLE_MODELS, get_model_by_id
 # Load environment variables
 load_dotenv()
 
+
 # ============================================================================
 # HELPER FUNCTIONS FOR EXECUTION TRACKING
 # ============================================================================
 
 def create_execution_entry(execution_id: int, agent: str, iteration_num: int,
-                          user_prompt: str, response: str) -> dict:
+                           user_prompt: str, response: str) -> dict:
     """Create a standardized execution history entry for the timeline UI."""
     agent_display_names = {
         "editor": "Editor",
@@ -34,14 +35,54 @@ def create_execution_entry(execution_id: int, agent: str, iteration_num: int,
         "status": "complete",
         "timestamp": datetime.now().isoformat(),
         "iteration_context": f"{agent_display_names.get(agent, agent)} #{iteration_num}",
-        "model_input": user_prompt,      # Only user message (not system)
+        "model_input": user_prompt,  # Only user message (not system)
         "model_output": response,
         "parsed_output": {}
     }
 
+
 def count_agent_executions(history: list, agent: str) -> int:
     """Count how many times an agent has executed in the history."""
     return sum(1 for entry in history if entry["agent"] == agent) + 1
+
+
+def render_timeline(placeholder):
+    """
+    Renders the execution history into a specific placeholder.
+    This allows us to refresh the timeline from inside the loop.
+    """
+    agent_icons = {
+        "editor": "✏️",
+        "researcher": "🔍",
+        "writer": "✍️",
+        "critic": "💭"
+    }
+
+    with placeholder.container():
+        st.subheader("🕒 Timeline")
+        if st.session_state.current_execution_history:
+            for entry in st.session_state.current_execution_history:
+                icon = agent_icons.get(entry['agent'], '⚙️')
+                label = f"{icon} {entry['iteration_context']}"
+
+                # Highlight the selected entry
+                if entry['id'] == st.session_state.selected_execution_id:
+                    st.success(f"**{label}**")
+                else:
+                    # Clickable only if workflow is NOT in progress
+                    # (Buttons inside loops can be tricky in Streamlit, so we disable them during run)
+                    if not st.session_state.workflow_in_progress:
+                        if st.button(label, key=f"timeline_btn_{entry['id']}", use_container_width=True):
+                            st.session_state.selected_execution_id = entry['id']
+                            st.rerun()
+                    else:
+                        st.info(label)
+
+            if st.session_state.workflow_in_progress:
+                st.info("ℹ️ Progress updates live below...", icon="ℹ️")
+        else:
+            st.info("No executions yet. Click Generate to start.")
+
 
 # ============================================================================
 # PAGE CONFIGURATION
@@ -79,12 +120,14 @@ with st.sidebar:
     model_options = [m["display"] for m in AVAILABLE_MODELS]
     model_ids = [m["id"] for m in AVAILABLE_MODELS]
 
+
     # Helper to get index by ID
     def get_index_by_id(target_id):
         try:
             return model_ids.index(target_id)
         except ValueError:
             return 0  # Default to first model if not found
+
 
     editor_model_id = st.selectbox(
         "Editor Model",
@@ -265,32 +308,14 @@ if st.session_state.workflow_in_progress or st.session_state.current_execution_h
     }
 
     # ------------------------------------------------------------------------
-    # LEFT COLUMN: Progress Timeline
+    # LEFT COLUMN: Progress Timeline (Use Placeholder!)
     # ------------------------------------------------------------------------
     with main_col1:
-        st.subheader("🕒 Timeline")
+        # Create a placeholder we can write to later from inside the loop
+        timeline_placeholder = st.empty()
 
-        if st.session_state.current_execution_history:
-            for entry in st.session_state.current_execution_history:
-                icon = agent_icons.get(entry['agent'], '⚙️')
-                label = f"{icon} {entry['iteration_context']}"
-
-                # Highlight the selected entry
-                if entry['id'] == st.session_state.selected_execution_id:
-                    st.success(f"**{label}**")
-                else:
-                    # Clickable only if workflow is NOT in progress
-                    if not st.session_state.workflow_in_progress:
-                        if st.button(label, key=f"timeline_btn_{entry['id']}", use_container_width=True):
-                            st.session_state.selected_execution_id = entry['id']
-                            st.rerun()
-                    else:
-                        st.info(label)
-
-            if st.session_state.workflow_in_progress:
-                st.info("ℹ️ Progress is reported during processing. Once complete, you can review any step of the process.", icon="ℹ️")
-        else:
-            st.info("No executions yet. Click Generate to start.")
+        # Initial render (draws whatever state we have right now)
+        render_timeline(timeline_placeholder)
 
     # ------------------------------------------------------------------------
     # RIGHT COLUMN: Execution Details (3 sections stacked)
@@ -379,6 +404,10 @@ if generate_clicked:
     current_status = st.empty()
     current_status.info("🚀 Starting workflow...")
 
+    # We must clear the previous timeline and re-render the empty state
+    # to show "Workflow in progress" immediately
+    render_timeline(timeline_placeholder)
+
     try:
         # Track the final draft as we stream
         final_draft = None
@@ -432,6 +461,9 @@ if generate_clicked:
 
                 st.session_state.current_execution_history.append(entry)
                 st.session_state.selected_execution_id = execution_id  # Auto-select latest
+
+                # [FIX]: FORCE TIMELINE UPDATE IN REAL-TIME
+                render_timeline(timeline_placeholder)
 
             # ================================================================
             # TRACK FINAL DRAFT AND ESSAY COMPLETION
@@ -499,7 +531,8 @@ if generate_clicked:
                         st.write(f"**Target Length:** {max_length} words")
                         st.write("**Models Used:**")
                         st.write(f"  - Editor: {editor_model['provider'].capitalize()} - {editor_model['name']}")
-                        st.write(f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
+                        st.write(
+                            f"  - Researcher: {researcher_model['provider'].capitalize()} - {researcher_model['name']}")
                         st.write(f"  - Writer: {writer_model['provider'].capitalize()} - {writer_model['name']}")
                         st.write(f"  - Critic: {critic_model['provider'].capitalize()} - {critic_model['name']}")
 
@@ -520,6 +553,9 @@ if generate_clicked:
         st.session_state.workflow_in_progress = False
         elapsed_time = datetime.now() - st.session_state.workflow_start_time
         current_status.success(f"✅ Workflow completed successfully in {elapsed_time.total_seconds():.1f} seconds!")
+
+        # Final render to enable buttons again (now that workflow_in_progress is False)
+        render_timeline(timeline_placeholder)
 
     except GeneratorExit:
         # Stream was interrupted (user left page, connection lost, etc.)
