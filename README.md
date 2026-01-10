@@ -37,6 +37,43 @@ This project demonstrates:
          └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
+### LangGraph Workflow Diagram
+
+```mermaid
+flowchart TD
+    START((START)) --> Editor
+
+    subgraph "Initial Editing Phase"
+        Editor[/"Editor<br/>(Orchestrator)"/]
+        Researcher["Researcher<br/>(Tavily Web Search)"]
+        Editor -->|"Need more research"| Researcher
+        Researcher --> Editor
+    end
+
+    Editor -->|"Outline ready"| Writer
+
+    subgraph "Critique & Revision Phase"
+        Writer["Writer<br/>(Draft Generation)"]
+        Critic["Critic<br/>(Quality Evaluation)"]
+        Writer --> Critic
+        Critic --> EditorReview[/"Editor<br/>(Review Feedback)"/]
+    end
+
+    EditorReview -->|"research"| Researcher2["Researcher"]
+    Researcher2 --> Writer
+    EditorReview -->|"revise"| Writer
+    EditorReview -->|"approve"| END((END))
+
+    style START fill:#2ecc71,stroke:#27ae60,color:#fff
+    style END fill:#e74c3c,stroke:#c0392b,color:#fff
+    style Editor fill:#3498db,stroke:#2980b9,color:#fff
+    style EditorReview fill:#3498db,stroke:#2980b9,color:#fff
+    style Researcher fill:#9b59b6,stroke:#8e44ad,color:#fff
+    style Researcher2 fill:#9b59b6,stroke:#8e44ad,color:#fff
+    style Writer fill:#e67e22,stroke:#d35400,color:#fff
+    style Critic fill:#1abc9c,stroke:#16a085,color:#fff
+```
+
 ### Intelligent Workflow Routing
 
 The **Editor** makes adaptive decisions based on workflow state:
@@ -103,8 +140,8 @@ This creates a **dynamic, adaptive workflow** that responds to essay quality in 
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
-cd essay_writer
+git clone https://github.com/markgewhite/agentic_essay_writer.git
+cd agentic_essay_writer
 
 # Create virtual environment
 python -m venv venv
@@ -328,18 +365,96 @@ Explore other LLM projects in this repository:
 
 ## 🚀 Deployment
 
-### Render.com (Recommended)
+### Live Demo
+
+> **[Live Demo](https://your-app-name.onrender.com)** - *Update URL after deployment*
+
+### Render.com Deployment
+
+This project is configured for one-click deployment to [Render.com](https://render.com) using the included `render.yaml` blueprint.
+
+#### Prerequisites
+
+1. A [Render.com](https://render.com) account (free tier available)
+2. Your code pushed to GitHub: `https://github.com/markgewhite/agentic_essay_writer.git`
+3. API keys ready for environment variables
+
+#### Step-by-Step Deployment
 
 1. **Push to GitHub**
-2. **Connect to Render.com** - Auto-detects `render.yaml`
-3. **Add environment variables** in Render dashboard
-4. **Deploy** - Automatic builds on git push
+   ```bash
+   git add .
+   git commit -m "Prepared for Render deployment"
+   git push origin main
+   ```
 
-The `render.yaml` configures:
+2. **Create New Web Service on Render**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click **"New +"** and select **"Web Service"**
+   - Connect your GitHub repository: `markgewhite/agentic_essay_writer`
+   - Render will auto-detect the `render.yaml` configuration
+
+3. **Configure Environment Variables**
+
+   In the Render dashboard, add the following environment variables:
+
+   | Variable | Required | Description |
+   |----------|----------|-------------|
+   | `OPENAI_API_KEY` | Yes* | OpenAI API key (sk-...) |
+   | `ANTHROPIC_API_KEY` | No | Anthropic API key for Claude models |
+   | `GOOGLE_API_KEY` | No | Google API key for Gemini models |
+   | `TAVILY_API_KEY` | **Yes** | Tavily API key for web research (tvly-...) |
+   | `LANGCHAIN_API_KEY` | No | LangSmith API key for monitoring |
+
+   *At least one LLM provider key is required (OpenAI, Anthropic, or Google)
+
+   **Note:** `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT`, and `PYTHON_VERSION` are pre-configured in `render.yaml`.
+
+4. **Deploy**
+   - Click **"Create Web Service"**
+   - Render will build and deploy automatically
+   - First deploy takes 3-5 minutes
+
+5. **Access Your App**
+   - Once deployed, click the URL provided by Render
+   - Format: `https://essay-writer-xxxx.onrender.com`
+
+#### Render Configuration Details
+
+The `render.yaml` blueprint configures:
+
+```yaml
+services:
+  - type: web
+    name: essay-writer
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+```
+
+**Features:**
 - Python 3.11 runtime
-- Dependency installation
-- Streamlit server (auto port detection)
-- Environment variable injection
+- Automatic dependency installation
+- Streamlit server with correct port binding
+- LangSmith tracing enabled by default
+- Auto-deploy on git push to `main` branch
+
+#### Troubleshooting Deployment
+
+**Build fails with dependency errors:**
+- Ensure `requirements.txt` is up to date
+- Check Render build logs for specific package issues
+
+**App starts but crashes:**
+- Verify all required environment variables are set
+- Check Render logs: Dashboard > Your Service > Logs
+
+**API errors in production:**
+- Confirm API keys are correctly entered (no extra spaces)
+- Verify keys have sufficient quota/credits
 
 ### Local Production Mode
 
